@@ -59,7 +59,12 @@ TokenNode *create_next_token(char *p, int &line) {
   }
   if ('\n' == *p) {
     line++;
-    return new TokenNode(line, p, 1, Punctuator);
+    int length = 1;
+    while (' ' == p[length]) {
+      if (' ' == p[++length]) length++;
+      else return new TokenNode(line, p, length, Unknown);
+    }
+    return new TokenNode(line, p, length, Punctuator);
   }
   if ('=' == *p ||
       '^' == *p || '~' == *p ||
@@ -76,7 +81,7 @@ TokenNode *create_next_token(char *p, int &line) {
 void print_tokens(TokenNode *head) {
   for (TokenNode *next = head; next != NULL; next = next->next) {
     if (*next->begin == '\n')
-      fprintf(stdout, "code: LF ");
+      fprintf(stdout, "code: LF + %d spaces ", next->length-1);
     else
       fprintf(stdout, "code: %.*s ", next->length, next->begin);
     switch (next->type)

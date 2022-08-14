@@ -4,3 +4,4 @@ func main() -> num
   a + a -> a
   if a < 1234
     print(b)
+     print(b)
