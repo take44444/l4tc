@@ -4,19 +4,19 @@ using namespace std;
 
 enum ASTType {
   // expression
-  expr,
-  exprFuncCall,
-  exprAssign,
+  ASTExpr,
+  ASTExprFuncCall,
+  ASTEexprAssign,
   // statement
-  exprStmt,
-  selectionStmt,
-  loopStmt,
+  ASTExprStmt,
+  ASTSelectionStmt,
+  ASTLoopStmt,
   // ident
-  ident,
+  ASTIdent,
   // declarator
-  declarator,
+  ASTDeclarator,
   // func definition
-  funcDefinition,
+  ASTFuncDefinition,
 };
 
 class ASTNode {

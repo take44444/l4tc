@@ -1,14 +1,11 @@
-#include "bits/stdc++.h"
-#include "token.cpp"
-#include "preprocessor.cpp"
-#include "ast.cpp"
-
-
-using namespace std;
+#include "lupc.h"
 
 int main() {
-  // string source = input();
-  // TokenNode *token_list = tokenize(source);
+  ostringstream ost;
+  ost << cin.rdbuf();
+  string source = ost.str();
+  TokenNode *token_list = tokenize(source);
+  print_tokens(token_list);
   // preprocess(token_list);
   // ASTNode *ast = parse(token_list);
   // SymbolEntry *ctx = analyze(ast);
