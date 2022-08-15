@@ -17,18 +17,18 @@ TokenNode *create_next_token(char *p, int &line) {
            ('a' <= p[length] && p[length] <= 'z') || p[length] == '_' ||
            ('0' <= p[length] && p[length] <= '9')) length++;
     TokenNode *ret = new TokenNode(line, p, length, Ident);
-    if (ret->is_equal_with_cstr("break")) ret->type = KwBreak;            // break
-    else if (ret->is_equal_with_cstr("continue")) ret->type = KwContinue; // continue
-    else if (ret->is_equal_with_cstr("elif")) ret->type = KwElif;         // elif
-    else if (ret->is_equal_with_cstr("else")) ret->type = KwElse;         // else
-    else if (ret->is_equal_with_cstr("for")) ret->type = KwFor;           // for
-    else if (ret->is_equal_with_cstr("func")) ret->type = KwFunc;         // func
-    else if (ret->is_equal_with_cstr("if")) ret->type = KwIf;             // if
-    else if (ret->is_equal_with_cstr("loop")) ret->type = KwLoop;         // loop
-    else if (ret->is_equal_with_cstr("num")) ret->type = KwNum;           // num
-    else if (ret->is_equal_with_cstr("return")) ret->type = KwReturn;     // return
-    else if (ret->is_equal_with_cstr("str")) ret->type = KwStr;           // str
-    else if (ret->is_equal_with_cstr("void")) ret->type = KwVoid;         // void
+    if (ret->is_equal_with_str("break")) ret->type = KwBreak;            // break
+    else if (ret->is_equal_with_str("continue")) ret->type = KwContinue; // continue
+    else if (ret->is_equal_with_str("elif")) ret->type = KwElif;         // elif
+    else if (ret->is_equal_with_str("else")) ret->type = KwElse;         // else
+    else if (ret->is_equal_with_str("for")) ret->type = KwFor;           // for
+    else if (ret->is_equal_with_str("func")) ret->type = KwFunc;         // func
+    else if (ret->is_equal_with_str("if")) ret->type = KwIf;             // if
+    else if (ret->is_equal_with_str("loop")) ret->type = KwLoop;         // loop
+    else if (ret->is_equal_with_str("num")) ret->type = KwNum;           // num
+    else if (ret->is_equal_with_str("return")) ret->type = KwReturn;     // return
+    else if (ret->is_equal_with_str("str")) ret->type = KwStr;           // str
+    else if (ret->is_equal_with_str("void")) ret->type = KwVoid;         // void
     return ret;
   }
   if ('!' == *p && p[1] == '=') {
