@@ -2,6 +2,15 @@
 
 using namespace std;
 
+class Error {
+  private:
+  string err_str;
+  public:
+  Error(string err) {
+    err_str = err;
+  }
+};
+
 enum TokenType {
   Delimiter,      // space
   Punctuator,     // , ( ) + <- -> = > & * | && || \n
@@ -52,36 +61,46 @@ class TokenNode {
   }
 };
 
+// utils.cpp
+TokenNode *expect_token_with_str(TokenNode **next, Error &err, string str);
+TokenNode *consume_token_with_str(TokenNode **next, string str);
+TokenNode *expect_token_with_type(TokenNode **next, Error &err, TokenType type);
+TokenNode *consume_token_with_type(TokenNode **next, TokenType type);
+
 // tokenizer.cpp
 TokenNode *create_next_token(char *p, int &line);
 void print_tokens(TokenNode *head);
 TokenNode *tokenize(string &source);
 
-enum ASTType {
-  // expression
-  ASTExpr,
-  ASTExprFuncCall,
-  ASTEexprAssign,
-  // statement
-  ASTExprStmt,
-  ASTSelectionStmt,
-  ASTLoopStmt,
-  // ident
-  ASTIdent,
-  // declarator
-  ASTDeclarator,
-  // func definition
-  ASTFuncDefinition,
-};
-
 class ASTNode {
   public:
-  enum ASTType type;
-  ASTNode *left;
-  ASTNode *right;
-  ASTNode(enum ASTType tp) {
-    type = tp;
+  TokenNode *op;
+  ASTNode(TokenNode *t) {
+    op = t;
   }
 };
 
+class ASTFuncDefNode : public ASTNode {
+  public:
+  ASTNode *left;
+  ASTNode *right;
+  ASTFuncDefNode(TokenNode *t) : ASTNode(t) {}
+};
+
+class ASTFuncDeclarationNode : public ASTNode {
+  public:
+  ASTNode *left;
+  ASTFuncDeclarationNode(TokenNode *t) : ASTNode(t) {}
+};
+
+class ASTFuncDeclaratorNode : public ASTNode {
+  public:
+  ASTFuncDeclaratorNode(TokenNode *t) : ASTNode(t) {}
+};
+
+// parser.cpp
+ASTFuncDeclaratorNode *parse_func_declarator(TokenNode **next, Error &err);
+ASTFuncDeclarationNode *parse_func_declaration(TokenNode **next, Error &err);
+ASTFuncDefNode *parse_func_def(TokenNode **next, Error &error);
+ASTNode *parse_external_declaration(TokenNode **next, Error &err);
 ASTNode *parse(TokenNode *head);
