@@ -1,5 +1,5 @@
 # Lup Compiler
-The compiler for Lup which is the original programming language.
+The compiler for Lup, which is the original programming language.
 
 ## Grammer
 
