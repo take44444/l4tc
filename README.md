@@ -4,12 +4,16 @@ The compiler for Lup which is the original programming language.
 ## Grammer
 
 ```
+code:
+  external-declaration
+  code external-declaration
+
 external-declaration:
   declaration
-  function-defintition
+  function-definition
 
 declaration:
-  type-specifier declarator-list
+  declaration-specifier declarator-list LF
 
 declaration-specifier:
   type-specifier
@@ -33,12 +37,47 @@ declarator-list:
 
 init-declarator:
   declarator: expr
+  declarator
 
 declarator:
-  identifier
+  identifier // 変数
+
+expr:
+  identifier // 変数
+  number-constant // 数値
+  expr + expr
+  expr - expr
+  expr / expr
+  expr * expr
+  expr & expr
+  expr | expr
+  expr < expr
+  expr > expr
+  expr <= expr
+  expr >= expr
+  expr != expr
+  expr <- expr
+  expr -> expr
+  (expr)
+  identifier()
+  identifier(expr-list)
+
+expr-list:
+  expr
+  expr-list,expr
 
 function-definition:
-  function-declaration compound-stmt
+  function-declaration LF compound-stmt
+
+function-declaration:
+  func identifier(single-declaration-list) -> type-specifier
+
+single-declaration-list:
+  single-declaration
+  single-declaration,single-declaration-list
+
+single-declaration:
+  type-specifier declarator
 
 compound-stmt:
   indents item
@@ -46,6 +85,7 @@ compound-stmt:
 
 indents:
   2spaces
+  indents 2paces
 
 item:
   declaration
@@ -58,4 +98,33 @@ statement:
   break-stmt
   continue-stmt
   selection-stmt
+  loop-stmt
+
+expr-stmt:
+  expr LF
+
+return-stmt:
+  return expr LF
+
+break-stmt:
+  break LF
+
+continue-stmt:
+  continue LF
+
+selection-stmt:
+  if expr LF compound-stmt
+  if expr LF compound-stmt selection-elif-stmt
+  if expr LF compound-stmt selection-elif-stmt selection-else-stmt
+  if expr LF compound-stmt selection-else-stmt
+
+selection-elif-stmt:
+  elif expr LF compound-stmt
+  selection-else-stmt elif expr LF compound-stmt
+
+selection-else-stmt:
+  else LF compound-stmt
+
+loop-stmt:
+  loop expr LF compound-stmt
 ```
