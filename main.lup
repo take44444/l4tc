@@ -1,3 +1,4 @@
+
 func main() -> num
   num a, b
   a <- 3
@@ -5,3 +6,4 @@ func main() -> num
   if a < 1234
     print(b)
      print(b)
+

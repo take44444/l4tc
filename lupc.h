@@ -25,7 +25,6 @@ enum TokenType {
   KwContinue,     // continue
   KwElif,         // elif
   KwElse,         // else
-  KwFor,          // for
   KwFunc,         // func
   KwIf,           // if
   KwLoop,         // loop
@@ -66,36 +65,122 @@ TokenNode *expect_token_with_str(TokenNode **next, Error &err, string str);
 TokenNode *consume_token_with_str(TokenNode **next, string str);
 TokenNode *expect_token_with_type(TokenNode **next, Error &err, TokenType type);
 TokenNode *consume_token_with_type(TokenNode **next, TokenType type);
+bool check_lf(TokenNode **next, Error &err);
+TokenNode *consume_token_with_indents(TokenNode **next, int indents);
+TokenNode *expect_token_with_indents(TokenNode **next, Error &err, int indents);
 
 // tokenizer.cpp
 TokenNode *create_next_token(char *p, int &line);
 void print_tokens(TokenNode *head);
 TokenNode *tokenize(string &source);
 
+enum ASTType {
+  Declaration,
+  Declarator,
+  FuncDef,
+  FuncDeclaration,
+  FuncDeclarator,
+  BreakStmt,
+  ContinueStmt,
+  ReturnStmt,
+  CompoundStmt,
+  ExprStmt,
+  SelectionStmt,
+  LoopStmt,
+};
+
 class ASTNode {
   public:
   TokenNode *op;
-  ASTNode(TokenNode *t) {
-    op = t;
+  ASTType type;
+  ASTNode(TokenNode *t, ASTType tp) : op(t), type(tp) {}
+};
+
+class ASTCompoundStmtNode : public ASTNode {
+  public:
+  vector<ASTNode *> stmts;
+  ASTCompoundStmtNode(TokenNode *t) : ASTNode(t, CompoundStmt) {
+    stmts = vector<ASTNode *>();
   }
 };
 
-class ASTFuncDefNode : public ASTNode {
+class ASTDeclaratorNode : public ASTNode {
   public:
-  ASTNode *left;
-  ASTNode *right;
-  ASTFuncDefNode(TokenNode *t) : ASTNode(t) {}
+  ASTDeclaratorNode(TokenNode *t) : ASTNode(t, Declarator) {}
 };
 
-class ASTFuncDeclarationNode : public ASTNode {
+class ASTDeclarationNode : public ASTNode {
   public:
-  ASTNode *left;
-  ASTFuncDeclarationNode(TokenNode *t) : ASTNode(t) {}
+  vector<ASTDeclaratorNode *> declarators;
+  ASTDeclarationNode(TokenNode *t) : ASTNode(t, Declaration) {}
 };
 
 class ASTFuncDeclaratorNode : public ASTNode {
   public:
-  ASTFuncDeclaratorNode(TokenNode *t) : ASTNode(t) {}
+  vector<ASTDeclarationNode *> args;
+  ASTFuncDeclaratorNode(TokenNode *t) : ASTNode(t, FuncDeclarator) {
+    args = vector<ASTDeclarationNode *>();
+  }
+};
+
+class ASTFuncDeclarationNode : public ASTNode {
+  public:
+  ASTFuncDeclaratorNode *declarator;
+  ASTFuncDeclarationNode(TokenNode *t) : ASTNode(t, FuncDeclaration) {}
+};
+
+class ASTFuncDefNode : public ASTNode {
+  public:
+  ASTFuncDeclarationNode *declaration;
+  ASTCompoundStmtNode *body;
+  ASTFuncDefNode(TokenNode *t) : ASTNode(t, FuncDef) {}
+};
+
+class ASTOtherStmtNode : public ASTNode {
+  public:
+  ASTOtherStmtNode(TokenNode *t, ASTType tp) : ASTNode(t, tp) {}
+};
+
+class ASTBreakStmtNode : public ASTOtherStmtNode {
+  public:
+  ASTBreakStmtNode(TokenNode *t) : ASTOtherStmtNode(t, BreakStmt) {}
+};
+
+class ASTContinueStmtNode : public ASTOtherStmtNode {
+  public:
+  ASTContinueStmtNode(TokenNode *t) : ASTOtherStmtNode(t, ContinueStmt) {}
+};
+
+class ASTExprNode : public ASTNode {
+  public:
+  ASTExprNode(TokenNode *t, ASTType tp) : ASTNode(t, tp) {}
+};
+
+class ASTExprStmtNode : public ASTOtherStmtNode {
+  public:
+  ASTExprNode *expr;
+  ASTExprStmtNode(TokenNode *t) : ASTOtherStmtNode(t, ExprStmt) {}
+};
+
+class ASTReturnStmtNode : public ASTOtherStmtNode {
+  public:
+  ASTExprNode *expr;
+  ASTReturnStmtNode(TokenNode *t) : ASTOtherStmtNode(t, ReturnStmt) {}
+};
+
+class ASTSelectionStmtNode : public ASTOtherStmtNode {
+  public:
+  ASTNode *cond;
+  ASTCompoundStmtNode *true_stmt;
+  ASTSelectionStmtNode *false_stmt;
+  ASTSelectionStmtNode(TokenNode *t) : ASTOtherStmtNode(t, SelectionStmt) {}
+};
+
+class ASTLoopStmtNode : public ASTOtherStmtNode {
+  public:
+  ASTNode *cond;
+  ASTCompoundStmtNode *true_stmt;
+  ASTLoopStmtNode(TokenNode *t) : ASTOtherStmtNode(t, LoopStmt) {}
 };
 
 // parser.cpp

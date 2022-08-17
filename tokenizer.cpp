@@ -20,8 +20,7 @@ TokenNode *create_next_token(char *p, int &line) {
     if (ret->is_equal_with_str("break")) ret->type = KwBreak;            // break
     else if (ret->is_equal_with_str("continue")) ret->type = KwContinue; // continue
     else if (ret->is_equal_with_str("elif")) ret->type = KwElif;         // elif
-    else if (ret->is_equal_with_str("else")) ret->type = KwElse;         // else
-    else if (ret->is_equal_with_str("for")) ret->type = KwFor;           // for
+    else if (ret->is_equal_with_str("else")) ret->type = KwElse;           // for
     else if (ret->is_equal_with_str("func")) ret->type = KwFunc;         // func
     else if (ret->is_equal_with_str("if")) ret->type = KwIf;             // if
     else if (ret->is_equal_with_str("loop")) ret->type = KwLoop;         // loop
@@ -59,6 +58,7 @@ TokenNode *create_next_token(char *p, int &line) {
   }
   if ('\n' == *p) {
     line++;
+    if ('\n' == p[1]) return new TokenNode(line, p, 1, Delimiter);
     int length = 1;
     while (' ' == p[length]) {
       if (' ' == p[++length]) length++;
@@ -113,9 +113,6 @@ void print_tokens(TokenNode *head) {
       case KwElse:
         fprintf(stdout, "type: KwElse\n");
         break;
-      case KwFor:
-        fprintf(stdout, "type: KwFor\n");
-        break;
       case KwFunc:
         fprintf(stdout, "type: KwFunc\n");
         break;
@@ -157,5 +154,6 @@ TokenNode *tokenize(string &source) {
     p = t->begin + t->length;
     t = create_next_token(p, l);
   }
+  if (head->is_equal_with_str("\n")) head->type = Delimiter;
   return head;
 }
