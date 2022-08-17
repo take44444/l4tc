@@ -156,6 +156,29 @@ class ASTExprNode : public ASTNode {
   ASTExprNode(TokenNode *t, ASTType tp) : ASTNode(t, tp) {}
 };
 
+class ASTBinOpNode : public ASTExprNode {
+  public:
+  ASTExprNode *left;
+  ASTExprNode *right;
+  ASTBinOpNode(TokenNode *t) : ASTExprNode(t, BinOp) {}
+};
+
+class ASTParenthesisExprNode : public ASTExprNode {
+
+};
+
+class ASTFuncCallNode : public ASTExprNode {
+
+};
+
+class ASTIdentExprNode : public ASTExprNode {
+
+};
+
+class ASTNumberConstantNode : public ASTExprNode {
+
+};
+
 class ASTExprStmtNode : public ASTOtherStmtNode {
   public:
   ASTExprNode *expr;
