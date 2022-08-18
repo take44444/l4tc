@@ -65,7 +65,6 @@ TokenNode *expect_token_with_str(TokenNode **next, Error &err, string str);
 TokenNode *consume_token_with_str(TokenNode **next, string str);
 TokenNode *expect_token_with_type(TokenNode **next, Error &err, TokenType type);
 TokenNode *consume_token_with_type(TokenNode **next, TokenType type);
-bool check_lf(TokenNode **next, Error &err);
 TokenNode *consume_token_with_indents(TokenNode **next, int indents);
 TokenNode *expect_token_with_indents(TokenNode **next, Error &err, int indents);
 
@@ -94,13 +93,22 @@ class ASTNode {
   TokenNode *op;
   ASTType type;
   ASTNode(TokenNode *t, ASTType tp) : op(t), type(tp) {}
+  bool is_unary_expr() {
+    return (
+      type == PostfixExpr ||
+      type == PrimaryExpr ||
+      type == IdentExpr ||
+      type == StringLiteralExpr ||
+      type == NumberConstantExpr
+    );
+  }
 };
 
 class ASTCompoundStmtNode : public ASTNode {
   public:
-  vector<ASTNode *> stmts;
+  vector<ASTNode *> items;
   ASTCompoundStmtNode(TokenNode *t) : ASTNode(t, CompoundStmt) {
-    stmts = vector<ASTNode *>();
+    items = vector<ASTNode *>();
   }
 };
 
@@ -156,28 +164,28 @@ class ASTExprNode : public ASTNode {
   ASTExprNode(TokenNode *t, ASTType tp) : ASTNode(t, tp) {}
 };
 
-class ASTBinOpNode : public ASTExprNode {
-  public:
-  ASTExprNode *left;
-  ASTExprNode *right;
-  ASTBinOpNode(TokenNode *t) : ASTExprNode(t, BinOp) {}
-};
+// class ASTBinOpNode : public ASTExprNode {
+//   public:
+//   ASTExprNode *left;
+//   ASTExprNode *right;
+//   ASTBinOpNode(TokenNode *t) : ASTExprNode(t, BinOp) {}
+// };
 
-class ASTParenthesisExprNode : public ASTExprNode {
+// class ASTParenthesisExprNode : public ASTExprNode {
 
-};
+// };
 
-class ASTFuncCallNode : public ASTExprNode {
+// class ASTFuncCallNode : public ASTExprNode {
 
-};
+// };
 
-class ASTIdentExprNode : public ASTExprNode {
+// class ASTIdentExprNode : public ASTExprNode {
 
-};
+// };
 
-class ASTNumberConstantNode : public ASTExprNode {
+// class ASTNumberConstantNode : public ASTExprNode {
 
-};
+// };
 
 class ASTExprStmtNode : public ASTOtherStmtNode {
   public:
@@ -211,4 +219,4 @@ ASTFuncDeclaratorNode *parse_func_declarator(TokenNode **next, Error &err);
 ASTFuncDeclarationNode *parse_func_declaration(TokenNode **next, Error &err);
 ASTFuncDefNode *parse_func_def(TokenNode **next, Error &error);
 ASTNode *parse_external_declaration(TokenNode **next, Error &err);
-ASTNode *parse(TokenNode *head);
+ASTNode *parse(TokenNode **head, Error &err);

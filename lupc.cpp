@@ -5,6 +5,7 @@ int main() {
   ost << cin.rdbuf();
   string source = ost.str();
   TokenNode *token_list = tokenize(source);
+  // parse(&token_list);
   print_tokens(token_list);
   // preprocess(token_list);
   // ASTNode *ast = parse(token_list);

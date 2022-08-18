@@ -1,8 +1,13 @@
 #include "lupc.h"
 
 TokenNode *expect_token_with_str(TokenNode **next, Error &err, string str) {
+  // NULL check
+  if ((*next) == NULL) {
+    err = Error("expected ????, found EOF");
+    return NULL;
+  }
   if (!(*next)->is_equal_with_str(&str[0])) {
-    err = Error("expect " + str);
+    err = Error("expected ????, found ????");
     return NULL;
   }
   TokenNode *ret = *next;
@@ -20,8 +25,13 @@ TokenNode *consume_token_with_str(TokenNode **next, string str) {
 }
 
 TokenNode *expect_token_with_type(TokenNode **next, Error &err, TokenType type) {
+  // NULL check
+  if ((*next) == NULL) {
+    err = Error("expected ????, found EOF");
+    return NULL;
+  }
   if ((*next)->type != type) {
-    err = Error("expected type " + (int)type);
+    err = Error("expected ????, found ????");
     return NULL;
   }
   TokenNode *ret = *next;
@@ -38,28 +48,9 @@ TokenNode *consume_token_with_type(TokenNode **next, TokenType type) {
   return ret;
 }
 
-bool check_lf(TokenNode **next, Error &err) {
-  if (*((*next)->begin) != '\n') {
-    err = Error("expected LF");
-    return false;
-  }
-  return true;
-}
-
 TokenNode *consume_token_with_indents(TokenNode **next, int indents) {
-  assert((*((*next)->begin) == '\n'));
-  if ((*next)->length != indents + 1) {
-    return NULL;
-  }
-  TokenNode *ret = *next;
-  *next = (*next)->next;
-  return ret;
-}
-
-TokenNode *expect_token_with_indents(TokenNode **next, Error &err, int indents) {
-  assert((*((*next)->begin) == '\n'));
-  if ((*next)->length != indents + 1) {
-    err = Error("expected + ? indents");
+  assert(*((*next)->begin) == ' ');
+  if ((*next)->length != indents) {
     return NULL;
   }
   TokenNode *ret = *next;

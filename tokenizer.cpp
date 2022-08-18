@@ -1,11 +1,8 @@
 #include "lupc.h"
 
-TokenNode *create_next_token(char *p, int &line) {
+TokenNode *create_next_token_sub(char *p, int &line, bool is_indent) {
   assert(line);
   if (!*p) return NULL;
-  if (*p == ' ') {
-    return new TokenNode(line, p, 1, Delimiter);
-  }
   if ('1' <= *p && *p <= '9') {
     int length = 0;
     while ('0' <= p[length] && p[length] <= '9') length++;
@@ -59,7 +56,11 @@ TokenNode *create_next_token(char *p, int &line) {
   if ('\n' == *p) {
     line++;
     if ('\n' == p[1]) return new TokenNode(line, p, 1, Delimiter);
-    int length = 1;
+    return new TokenNode(line, p, 1, Punctuator);
+  }
+  if (' ' == *p) {
+    if (!is_indent) return new TokenNode(line, p, 1, Delimiter);
+    int length = 0;
     while (' ' == p[length]) {
       if (' ' == p[++length]) length++;
       else return new TokenNode(line, p, length, Unknown);
@@ -78,10 +79,20 @@ TokenNode *create_next_token(char *p, int &line) {
   return new TokenNode(line, p, 1, Unknown);
 }
 
+TokenNode *create_next_token(char *p, int &line) {
+  static bool is_indent = true;
+  TokenNode *ret = create_next_token_sub(p, line, is_indent);
+  is_indent = ret != NULL &&
+              ret->is_equal_with_str("\n") && ret->type == Punctuator;
+  return ret;
+}
+
 void print_tokens(TokenNode *head) {
   for (TokenNode *next = head; next != NULL; next = next->next) {
-    if (*next->begin == '\n')
-      fprintf(stdout, "code: LF + %d spaces ", next->length-1);
+    if (*next->begin == ' ')
+      fprintf(stdout, "%d spaces ", next->length);
+    else if (next->is_equal_with_str("\n"))
+      fprintf(stdout, "code: LF ");
     else
       fprintf(stdout, "code: %.*s ", next->length, next->begin);
     switch (next->type)
@@ -154,6 +165,5 @@ TokenNode *tokenize(string &source) {
     p = t->begin + t->length;
     t = create_next_token(p, l);
   }
-  if (head->is_equal_with_str("\n")) head->type = Delimiter;
   return head;
 }

@@ -1,0 +1,6 @@
+{
+  "files.associations": {
+    "*.obj": "lua",
+    "new": "cpp"
+  }
+}

@@ -85,7 +85,6 @@ compound-stmt:
 
 indents:
   2spaces
-  indents 2paces
 
 item:
   declaration

@@ -1,7 +1,33 @@
 #include "lupc.h"
 
-ASTExprNode *parse_expr(TokenNode **next, Error &err) {
+ASTExprNode *parse_unary_expr(TokenNode **next, Error &err) {
+}
+ASTExprNode *parse_logical_or_expr(TokenNode **next, Error &err) {
+}
+ASTExprNode *parse_assign_expr(TokenNode **next, Error &err) {
+  ASTExprNode *left = parse_logical_or_expr(next, err);
+  // parse error
+  if (!left) return NULL;
+  if (!left->is_unary_expr()) return left;
+  TokenNode *t = consume_token_with_str(next, ":");
+  if (!t) return left;
+  ASTAssignExprNode *ret;
+  
+  ret = new ASTAssignExprNode(t);
+  ret->left = left;
+  ret->right = parse_assign_expr(next, err);
+  if (!!ret->right && )
+  
+  ret->expr = parse_expr(next, err);
+  if (ret->expr == NULL) {
+    delete ret;
+    return NULL;
+  }
+  return ret;
+}
 
+ASTExprNode *parse_expr(TokenNode **next, Error &err) {
+  return parse_assign_expr(next, err);
 }
 
 ASTExprStmtNode *parse_expr_stmt(TokenNode **next, Error &err) {
@@ -9,9 +35,10 @@ ASTExprStmtNode *parse_expr_stmt(TokenNode **next, Error &err) {
   ASTExprNode *expr = parse_expr(next, err);
   // check parse error
   if (expr == NULL) return NULL;
-  // token "\n" should be here
-  if (!check_lf(next, err)) return NULL;
-  ASTExprStmtNode *ret = new ASTExprStmtNode(*next);
+  // token LF should be here
+  TokenNode *t = expect_token_with_str(next, err, "\n");
+  if (t == NULL) return NULL;
+  ASTExprStmtNode *ret = new ASTExprStmtNode(t);
   ret->expr = expr;
   return ret;
 }
@@ -22,10 +49,16 @@ ASTReturnStmtNode *parse_return_stmt(TokenNode **next, Error &err) {
   if (t == NULL) return NULL;
   ASTReturnStmtNode *ret = new ASTReturnStmtNode(t);
   // parse expr
-  ASTExprNode *expr = parse_expr(next, err);
+  ret->expr = parse_expr(next, err);
   // check parse error
-  if (expr == NULL) return NULL;
-  ret->expr = expr;
+  if (ret->expr == NULL) {
+    delete ret;
+    return NULL;
+  }
+  if (expect_token_with_str(next, err, "\n") == NULL) {
+    delete ret;
+    return NULL;
+  }
   return ret;
 }
 
@@ -37,60 +70,89 @@ ASTDeclaratorNode *parse_declarator(TokenNode **next, Error &err) {
 }
 
 ASTDeclarationNode *parse_declaration(TokenNode **next, Error &err) {
-  // parse type-specifer
-  TokenNode *t = consume_token_with_type(next, KwNum);
-  if (t == NULL) t = consume_token_with_type(next, KwStr);
-  // check parse error
-  if (t == NULL) {
-    err = Error("expected type-specifier");
+  // NULL check
+  if ((*next) == NULL) {
+    err = Error("expected declaration, found EOF");
     return NULL;
   }
+  // parse type-specifer
+  TokenNode *t;
+  if (
+    (t = consume_token_with_type(next, KwNum)) == NULL &&
+    (t = expect_token_with_type(next, err, KwStr)) == NULL
+  ) return NULL;
   ASTDeclarationNode *ret = new ASTDeclarationNode(t);
   ret->declarators = vector<ASTDeclaratorNode *>();
   while (1) {
     // parse declarator
     ASTDeclaratorNode *declarator = parse_declarator(next, err);
     // check parse error
-    if (declarator == NULL) return NULL;
+    if (declarator == NULL) {
+      for (ASTDeclaratorNode *p: ret->declarators) delete p;
+      delete ret;
+      return NULL;
+    }
     ret->declarators.push_back(declarator);
     // declaration end
-    if (*((*next)->begin) == '\n') break;
+    if (consume_token_with_str(next, "\n") != NULL) break;
     // token "," should be here
-    t = expect_token_with_str(next, err, ",");
-    if (t == NULL) return NULL;
+    if (expect_token_with_str(next, err, ",") == NULL) {
+      for (ASTDeclaratorNode *p: ret->declarators) delete p;
+      delete ret;
+      return NULL;
+    }
   }
   return ret;
 }
 
 ASTDeclarationNode *parse_single_declaration(TokenNode **next, Error &err) {
-  // parse type-specifer
-  TokenNode *t = consume_token_with_type(next, KwNum);
-  if (t == NULL) t = consume_token_with_type(next, KwStr);
-  // check parse error
-  if (t == NULL) {
-    err = Error("expected type-specifier");
+  // NULL check
+  if ((*next) == NULL) {
+    err = Error("expected single-declaration, found EOF");
     return NULL;
   }
+  // parse type-specifer
+  TokenNode *t;
+  if (
+    (t = consume_token_with_type(next, KwNum)) == NULL &&
+    (t = expect_token_with_type(next, err, KwStr)) == NULL
+  ) return NULL;
   ASTDeclarationNode *ret = new ASTDeclarationNode(t);
   ret->declarators = vector<ASTDeclaratorNode *>();
   // parse declarator
   ASTDeclaratorNode *declarator = parse_declarator(next, err);
   // check parse error
-  if (declarator == NULL) return NULL;
+  if (declarator == NULL) {
+    delete ret;
+    return NULL;
+  }
   ret->declarators.push_back(declarator);
   return ret;
 }
 
 ASTCompoundStmtNode *parse_comp_stmt(TokenNode **next, Error &err, int indents);
 ASTOtherStmtNode *parse_other_stmt(TokenNode **next, Error &err) {
+  // NULL check
+  if ((*next) == NULL) {
+    err = Error("expected statement, found EOF");
+    return NULL;
+  }
   ASTOtherStmtNode *ret;
   switch ((*next)->type)
   {
   case KwBreak:
     ret = new ASTBreakStmtNode(consume_token_with_type(next, KwBreak));
+    if (expect_token_with_str(next, err, "\n") == NULL) {
+      delete ret;
+      return NULL;
+    }
     break;
   case KwContinue:
     ret = new ASTContinueStmtNode(consume_token_with_type(next, KwContinue));
+    if (expect_token_with_str(next, err, "\n") == NULL) {
+      delete ret;
+      return NULL;
+    }
     break;
   case KwReturn:
     ret = parse_return_stmt(next, err);
@@ -109,19 +171,29 @@ ASTOtherStmtNode *parse_other_stmt(TokenNode **next, Error &err) {
 }
 
 ASTCompoundStmtNode *parse_comp_stmt(TokenNode **next, Error &err, int indents) {
-  if (!check_lf(next, err)) return NULL;
+  // NULL check
+  if (expect_token_with_type(next, err, Punctuator) == NULL) return NULL;
   ASTCompoundStmtNode *ret = new ASTCompoundStmtNode(*next);
   while (1) {
-    // token "\n" should be here
-    if (!check_lf(next, err)) return NULL;
+    // token indent should be here
+    if (*((*next)->begin) != ' ') {
+      err = Error("expected indent, found ????");
+      for (ASTNode *p: ret->items) delete p;
+      delete ret;
+      return NULL;
+    }
     if (consume_token_with_indents(next, indents) == NULL) {
       if ((*next)->length > indents) {
       // inner compound-stmt
         // parse compound-stmt
         ASTCompoundStmtNode *comp_stmt = parse_comp_stmt(next, err, indents + 2);
         // check parse error
-        if (comp_stmt == NULL) return NULL;
-        ret->stmts.push_back(comp_stmt);
+        if (comp_stmt == NULL) {
+          for (ASTNode *p: ret->items) delete p;
+          delete ret;
+          return NULL;
+        }
+        ret->items.push_back(comp_stmt);
       } else {
       // compound-stmt end
         break;
@@ -131,15 +203,23 @@ ASTCompoundStmtNode *parse_comp_stmt(TokenNode **next, Error &err, int indents) 
       // parse declaration
       ASTDeclarationNode *declaration = parse_declaration(next, err);
       // check parse error
-      if (declaration == NULL) return NULL;
-      ret->stmts.push_back(declaration);
+      if (declaration == NULL) {
+        for (ASTNode *p: ret->items) delete p;
+        delete ret;
+        return NULL;
+      }
+      ret->items.push_back(declaration);
     } else {
     // other-stmt
       // parse other-stmt
       ASTOtherStmtNode *other_stmt = parse_other_stmt(next, err);
       // check parse error
-      if (other_stmt == NULL) return NULL;
-      ret->stmts.push_back(other_stmt);
+      if (other_stmt == NULL) {
+        for (ASTNode *p: ret->items) delete p;
+        delete ret;
+        return NULL;
+      }
+      ret->items.push_back(other_stmt);
     }
   }
   return ret;
@@ -152,18 +232,29 @@ ASTFuncDeclaratorNode *parse_func_declarator(TokenNode **next, Error &err) {
   if (t == NULL) return NULL;
   ASTFuncDeclaratorNode *ret = new ASTFuncDeclaratorNode(t);
   // token "(" should be here
-  if (expect_token_with_str(next, err, "(") == NULL) return NULL;
+  if (expect_token_with_str(next, err, "(") == NULL) {
+    delete ret;
+    return NULL;
+  }
   while (!(*next)->is_equal_with_str(")")) {
     // parse single-declaration
     ASTDeclarationNode *declaration = parse_single_declaration(next, err);
     // check parse error
-    if (declaration == NULL) return NULL;
+    if (declaration == NULL) {
+      for (ASTDeclarationNode *p: ret->args) delete p;
+      delete ret;
+      return NULL;
+    }
     ret->args.push_back(declaration);
     // args end
     if (consume_token_with_str(next, ",") == NULL) break;
   }
   // token ")" should be here
-  if (expect_token_with_str(next, err, ")") == NULL) return NULL;
+  if (expect_token_with_str(next, err, ")") == NULL) {
+    for (ASTDeclarationNode *p: ret->args) delete p;
+    delete ret;
+    return NULL;
+  }
   return ret;
 }
 
@@ -176,12 +267,18 @@ ASTFuncDeclarationNode *parse_func_declaration(TokenNode **next, Error &err) {
   // token "->" should be here
   if (expect_token_with_str(next, err, "->") == NULL) return NULL;
   // parse type-specifer
-  TokenNode *t = consume_token_with_type(next, KwNum);
-  if (t == NULL) t = consume_token_with_type(next, KwStr);
-  if (t == NULL) t = consume_token_with_type(next, KwVoid);
-  // check parse error
-  if (t == NULL) {
-    err = Error("expected type-specifier");
+  TokenNode *t;
+  if (
+    (t = consume_token_with_type(next, KwNum)) == NULL &&
+    (t = consume_token_with_type(next, KwStr)) == NULL &&
+    (t = expect_token_with_type(next, err, KwVoid)) == NULL
+  ) {
+    delete declarator;
+    return NULL;
+  }
+  // token LF should be here
+  if (expect_token_with_str(next, err, "\n") == NULL) {
+    delete declarator;
     return NULL;
   }
   ASTFuncDeclarationNode *ret = new ASTFuncDeclarationNode(t);
@@ -191,49 +288,72 @@ ASTFuncDeclarationNode *parse_func_declaration(TokenNode **next, Error &err) {
 
 ASTFuncDefNode *parse_func_def(TokenNode **next, Error &err) {
 // func-declaration compound-stmt
-  // NULL check
-  if ((*next) == NULL) {
-    err = Error("expected function-definition but found EOF");
-    return NULL;
-  }
   // token KwFunc should be here
   TokenNode *t = expect_token_with_type(next, err, KwFunc);
   if (t == NULL) return NULL;
   ASTFuncDefNode *ret = new ASTFuncDefNode(t);
   // parse function-declaration
-  ASTFuncDeclarationNode *func_declaration = parse_func_declaration(next, err);
+  ret->declaration = parse_func_declaration(next, err);
   // check parse error
-  if (func_declaration == NULL) return NULL;
-  ret->declaration = func_declaration;
+  if (ret->declaration == NULL) {
+    delete ret;
+    return NULL;
+  }
   // parse compound-stmt
-  ASTCompoundStmtNode *comp_stmt = parse_comp_stmt(next, err, 2);
+  ret->body = parse_comp_stmt(next, err, 2);
   // check parse error
-  if (comp_stmt == NULL) return NULL;
-  ret->body = comp_stmt;
+  if (ret->body == NULL) {
+    delete ret;
+    delete ret->declaration;
+    return NULL;
+  }
   return ret;
 }
 
 ASTNode *parse_external_declaration(TokenNode **next, Error &err) {
-  // NULL check
-  if ((*next) == NULL) {
-    err = Error("expected external-declaration but found EOF");
-    return NULL;
-  }
-  ASTNode *ret;
-  if ((*next)->is_equal_with_str("func")) ret = parse_func_def(next, err);
-  else ret = parse_declaration(next, err);
-  // check parse error
-  if (ret == NULL) return NULL;
-
-  // need LF + 0 indents after external-declaration
-  if (check_lf(next, err)) {
-    if (expect_token_with_indents(next, err, 0) == NULL) return NULL;
-  } else return NULL;
-  return ret;
+  if (
+    (*next) != NULL &&
+    (*next)->is_equal_with_str("func")
+  ) return parse_func_def(next, err);
+  else return parse_declaration(next, err);
 }
 
-ASTNode *parse(TokenNode *head_token, Error &err) {
-  TokenNode *next = head_token;
+void init_parser(TokenNode **head_token) {
+  // *head_token can be NULL
+  TokenNode *next = *head_token;
+  TokenNode *t, *bef;
+  while (next != NULL) {
+    // if next token is Delimiter, remove it and continue
+    t = consume_token_with_type(&next, Delimiter);    
+    if (t == NULL) break;
+    delete t;
+  }
+  // set new head_token
+  *head_token = next;
+  // remove first LF punctuator
+  if (*head_token != NULL) {
+    t = consume_token_with_str(head_token, "\n");
+    if (t != NULL) delete t;
+  }
+  // *head_token can be NULL
+  next = *head_token;
+  while (next != NULL) {
+    bef = next;
+    assert(bef->type != Delimiter);
+    next = bef->next;
+    while (next != NULL) {
+      // if next token is Delimiter, remove it and continue
+      t = consume_token_with_type(&next, Delimiter);
+      if (t == NULL) break;
+      delete t;
+    }
+    bef->next = next;
+  }
+}
+
+ASTNode * parse(TokenNode **head_token, Error &err) {
+  init_parser(head_token);
+  TokenNode *next = *head_token;
   // head AST node
   ASTNode *head = parse_external_declaration(&next, err);
   for (
@@ -246,15 +366,4 @@ ASTNode *parse(TokenNode *head_token, Error &err) {
     if (next == NULL) break;
   }
   return head;
-  // external declaration
-  // static num a: 3, v: 3;  : declaration
-  // const num a: 4;         : declaration
-  // num a. b                : declaration
-  // 
-  // func f(x) -> num        : function-definition
-  //   a = 3
-  //   num c
-  // 
-  // struct name
-  //   num a
 }
