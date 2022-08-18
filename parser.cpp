@@ -4,22 +4,26 @@ ASTExprNode *parse_unary_expr(TokenNode **next, Error &err) {
 }
 ASTExprNode *parse_logical_or_expr(TokenNode **next, Error &err) {
 }
+
+// ok
 ASTExprNode *parse_assign_expr(TokenNode **next, Error &err) {
   ASTExprNode *left = parse_logical_or_expr(next, err);
   // parse error
   if (!left) return NULL;
+  // if it is not unary-expr, it can't be left of assignment-expr
+  // but it is correct expr
   if (!left->is_unary_expr()) return left;
   TokenNode *t = consume_token_with_str(next, ":");
+  // if ":" is not here, it is not assignment-expr
+  // but it is correct expr
   if (!t) return left;
-  ASTAssignExprNode *ret;
-  
-  ret = new ASTAssignExprNode(t);
+  // now it is assignment-expr
+  ASTAssignExprNode *ret = new ASTAssignExprNode(t);
   ret->left = left;
   ret->right = parse_assign_expr(next, err);
-  if (!!ret->right && )
-  
-  ret->expr = parse_expr(next, err);
-  if (ret->expr == NULL) {
+  // parse error
+  if (!ret->right) {
+    delete left;
     delete ret;
     return NULL;
   }
