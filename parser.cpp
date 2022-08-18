@@ -29,6 +29,7 @@ ASTExprNode *parse_primary_expr(TokenNode **next, Error &err) {
   return NULL;
 }
 
+// ok
 ASTExprNode *parse_postfix_expr(TokenNode **next, Error &err) {
 // function-call
 // array
@@ -75,6 +76,7 @@ ASTExprNode *parse_unary_expr(TokenNode **next, Error &err) {
   return parse_postfix_expr(next, err);
 }
 
+// ok
 ASTExprNode *parse_multiplicative_expr(TokenNode **next, Error &err) {
   ASTExprNode *left, *ret = parse_unary_expr(next, err);
   // parse error
@@ -90,8 +92,10 @@ ASTExprNode *parse_multiplicative_expr(TokenNode **next, Error &err) {
     ret->right = parse_unary_expr(next, err);
     ret->left = left;
   }
+  return ret;
 }
 
+// ok
 ASTExprNode *parse_additive_expr(TokenNode **next, Error &err) {
   ASTExprNode *left, *ret = parse_multiplicative_expr(next, err);
   // parse error
@@ -106,8 +110,10 @@ ASTExprNode *parse_additive_expr(TokenNode **next, Error &err) {
     ret->right = parse_multiplicative_expr(next, err);
     ret->left = left;
   }
+  return ret;
 }
 
+// ok
 ASTExprNode *parse_shift_expr(TokenNode **next, Error &err) {
   ASTExprNode *left, *ret = parse_additive_expr(next, err);
   // parse error
@@ -122,8 +128,10 @@ ASTExprNode *parse_shift_expr(TokenNode **next, Error &err) {
     ret->right = parse_additive_expr(next, err);
     ret->left = left;
   }
+  return ret;
 }
 
+// ok
 ASTExprNode *parse_relational_expr(TokenNode **next, Error &err) {
   ASTExprNode *left, *ret = parse_shift_expr(next, err);
   // parse error
@@ -140,8 +148,10 @@ ASTExprNode *parse_relational_expr(TokenNode **next, Error &err) {
     ret->right = parse_shift_expr(next, err);
     ret->left = left;
   }
+  return ret;
 }
 
+// ok
 ASTExprNode *parse_equality_expr(TokenNode **next, Error &err) {
   ASTExprNode *left, *ret = parse_relational_expr(next, err);
   // parse error
@@ -156,8 +166,10 @@ ASTExprNode *parse_equality_expr(TokenNode **next, Error &err) {
     ret->right = parse_relational_expr(next, err);
     ret->left = left;
   }
+  return ret;
 }
 
+// ok
 ASTExprNode *parse_bitwise_and_expr(TokenNode **next, Error &err) {
   ASTExprNode *left, *ret = parse_equality_expr(next, err);
   // parse error
@@ -169,8 +181,10 @@ ASTExprNode *parse_bitwise_and_expr(TokenNode **next, Error &err) {
     ret->right = parse_equality_expr(next, err);
     ret->left = left;
   }
+  return ret;
 }
 
+// ok
 ASTExprNode *parse_bitwise_xor_expr(TokenNode **next, Error &err) {
   ASTExprNode *left, *ret = parse_bitwise_and_expr(next, err);
   // parse error
@@ -182,8 +196,10 @@ ASTExprNode *parse_bitwise_xor_expr(TokenNode **next, Error &err) {
     ret->right = parse_bitwise_and_expr(next, err);
     ret->left = left;
   }
+  return ret;
 }
 
+// ok
 ASTExprNode *parse_bitwise_or_expr(TokenNode **next, Error &err) {
   ASTExprNode *left, *ret = parse_bitwise_xor_expr(next, err);
   // parse error
@@ -195,8 +211,10 @@ ASTExprNode *parse_bitwise_or_expr(TokenNode **next, Error &err) {
     ret->right = parse_bitwise_xor_expr(next, err);
     ret->left = left;
   }
+  return ret;
 }
 
+// ok
 ASTExprNode *parse_logical_and_expr(TokenNode **next, Error &err) {
   ASTExprNode *left, *ret = parse_bitwise_or_expr(next, err);
   // parse error
@@ -208,8 +226,10 @@ ASTExprNode *parse_logical_and_expr(TokenNode **next, Error &err) {
     ret->right = parse_bitwise_or_expr(next, err);
     ret->left = left;
   }
+  return ret;
 }
 
+// ok
 ASTExprNode *parse_logical_or_expr(TokenNode **next, Error &err) {
   ASTExprNode *left, *ret = parse_logical_and_expr(next, err);
   // parse error
@@ -221,6 +241,7 @@ ASTExprNode *parse_logical_or_expr(TokenNode **next, Error &err) {
     ret->right = parse_logical_and_expr(next, err);
     ret->left = left;
   }
+  return ret;
 }
 
 // ok
