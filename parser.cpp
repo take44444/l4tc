@@ -1,8 +1,226 @@
 #include "lupc.h"
 
-ASTExprNode *parse_unary_expr(TokenNode **next, Error &err) {
+// ok
+ASTExprNode *parse_primary_expr(TokenNode **next, Error &err) {
+  // NULL check
+  if ((*next) == NULL) {
+    err = Error("expected primary-expr, found EOF");
+    return NULL;
+  }
+  TokenNode *t;
+  ASTExprNode *ret;
+  if (
+    !!(t = consume_token_with_type(next, NumberConstant)) ||
+    !!(t = consume_token_with_type(next, Ident))
+  ) {
+    return new ASTSimpleExprNode(t);
+  }
+  if (!!(t = consume_token_with_str(next, "("))) {
+    ret = new ASTPrimaryExpr(t);
+    ret->expr = parse_expr(next, err);
+    // parse error
+    if (!ret->expr) {
+      delete ret;
+      return NULL;
+    }
+    if (!expect_token_with_str(next, err, ")")) return ret;
+  }
+  err = Error("expected primary-expr, found ????");
+  return NULL;
 }
+
+ASTExprNode *parse_postfix_expr(TokenNode **next, Error &err) {
+// function-call
+// array
+// increment
+// decrement
+// ->
+// .
+  ASTExprNode *primary = parse_primary_expr(next, err);
+  // parse error
+  if (!primary) return NULL;
+  TokenNode *t = consume_token_with_str(next, "(");
+  // if "(" is not here, it is not function-call
+  // but it is correct primary expr
+  if (!t) return primary;
+  // now it is assignment-expr
+  ASTFuncCallExprNode *ret = new ASTFuncCallExprNode(t);
+  ret->primary = primary;
+  ret->args = vector<ASTExprNode *>();
+  while (!(*next)->is_equal_with_str(")")) {
+    // parse arg
+    ASTExprNode *arg = parse_assign_expr(next, err);
+    // check parse error
+    if (!arg) {
+      for (ASTExprNode *p: ret->args) delete p;
+      delete primary;
+      delete ret;
+      return NULL;
+    }
+    ret->args.push_back(arg);
+    // args end
+    if (consume_token_with_str(next, ",") == NULL) break;
+  }
+  // token ")" should be here
+  if (expect_token_with_str(next, err, ")") == NULL) {
+    for (ASTExprNode *p: ret->args) delete p;
+    delete primary;
+    delete ret;
+    return NULL;
+  }
+  return ret;
+}
+
+ASTExprNode *parse_unary_expr(TokenNode **next, Error &err) {
+  return parse_postfix_expr(next, err);
+}
+
+ASTExprNode *parse_multiplicative_expr(TokenNode **next, Error &err) {
+  ASTExprNode *left, *ret = parse_unary_expr(next, err);
+  // parse error
+  if (!ret) return NULL;
+  TokenNode *t;
+  while (
+    !!(t = consume_token_with_str(next, "*")) ||
+    !!(t = consume_token_with_str(next, "/")) ||
+    !!(t = consume_token_with_str(next, "%"))
+  ) {
+    left = ret;
+    ret = new ASTMultiplicativeExpr(t);
+    ret->right = parse_unary_expr(next, err);
+    ret->left = left;
+  }
+}
+
+ASTExprNode *parse_additive_expr(TokenNode **next, Error &err) {
+  ASTExprNode *left, *ret = parse_multiplicative_expr(next, err);
+  // parse error
+  if (!ret) return NULL;
+  TokenNode *t;
+  while (
+    !!(t = consume_token_with_str(next, "+")) ||
+    !!(t = consume_token_with_str(next, "-"))
+  ) {
+    left = ret;
+    ret = new ASTAdditiveExpr(t);
+    ret->right = parse_multiplicative_expr(next, err);
+    ret->left = left;
+  }
+}
+
+ASTExprNode *parse_shift_expr(TokenNode **next, Error &err) {
+  ASTExprNode *left, *ret = parse_additive_expr(next, err);
+  // parse error
+  if (!ret) return NULL;
+  TokenNode *t;
+  while (
+    !!(t = consume_token_with_str(next, "<<")) ||
+    !!(t = consume_token_with_str(next, ">>"))
+  ) {
+    left = ret;
+    ret = new ASTShiftExpr(t);
+    ret->right = parse_additive_expr(next, err);
+    ret->left = left;
+  }
+}
+
+ASTExprNode *parse_relational_expr(TokenNode **next, Error &err) {
+  ASTExprNode *left, *ret = parse_shift_expr(next, err);
+  // parse error
+  if (!ret) return NULL;
+  TokenNode *t;
+  while (
+    !!(t = consume_token_with_str(next, "<")) ||
+    !!(t = consume_token_with_str(next, ">")) ||
+    !!(t = consume_token_with_str(next, "<=")) ||
+    !!(t = consume_token_with_str(next, ">="))
+  ) {
+    left = ret;
+    ret = new ASTRelationalExpr(t);
+    ret->right = parse_shift_expr(next, err);
+    ret->left = left;
+  }
+}
+
+ASTExprNode *parse_equality_expr(TokenNode **next, Error &err) {
+  ASTExprNode *left, *ret = parse_relational_expr(next, err);
+  // parse error
+  if (!ret) return NULL;
+  TokenNode *t;
+  while (
+    !!(t = consume_token_with_str(next, "==")) ||
+    !!(t = consume_token_with_str(next, "!="))
+  ) {
+    left = ret;
+    ret = new ASTEqualtyExpr(t);
+    ret->right = parse_relational_expr(next, err);
+    ret->left = left;
+  }
+}
+
+ASTExprNode *parse_bitwise_and_expr(TokenNode **next, Error &err) {
+  ASTExprNode *left, *ret = parse_equality_expr(next, err);
+  // parse error
+  if (!ret) return NULL;
+  TokenNode *t;
+  while (!!(t = consume_token_with_str(next, "&"))) {
+    left = ret;
+    ret = new ASTBitwiseAndExpr(t);
+    ret->right = parse_equality_expr(next, err);
+    ret->left = left;
+  }
+}
+
+ASTExprNode *parse_bitwise_xor_expr(TokenNode **next, Error &err) {
+  ASTExprNode *left, *ret = parse_bitwise_and_expr(next, err);
+  // parse error
+  if (!ret) return NULL;
+  TokenNode *t;
+  while (!!(t = consume_token_with_str(next, "^"))) {
+    left = ret;
+    ret = new ASTBitwiseXorExpr(t);
+    ret->right = parse_bitwise_and_expr(next, err);
+    ret->left = left;
+  }
+}
+
+ASTExprNode *parse_bitwise_or_expr(TokenNode **next, Error &err) {
+  ASTExprNode *left, *ret = parse_bitwise_xor_expr(next, err);
+  // parse error
+  if (!ret) return NULL;
+  TokenNode *t;
+  while (!!(t = consume_token_with_str(next, "|"))) {
+    left = ret;
+    ret = new ASTBitwiseOrExpr(t);
+    ret->right = parse_bitwise_xor_expr(next, err);
+    ret->left = left;
+  }
+}
+
+ASTExprNode *parse_logical_and_expr(TokenNode **next, Error &err) {
+  ASTExprNode *left, *ret = parse_bitwise_or_expr(next, err);
+  // parse error
+  if (!ret) return NULL;
+  TokenNode *t;
+  while (!!(t = consume_token_with_str(next, "&&"))) {
+    left = ret;
+    ret = new ASTLogicalAndExpr(t);
+    ret->right = parse_bitwise_or_expr(next, err);
+    ret->left = left;
+  }
+}
+
 ASTExprNode *parse_logical_or_expr(TokenNode **next, Error &err) {
+  ASTExprNode *left, *ret = parse_logical_and_expr(next, err);
+  // parse error
+  if (!ret) return NULL;
+  TokenNode *t;
+  while (!!(t = consume_token_with_str(next, "||"))) {
+    left = ret;
+    ret = new ASTLogicalOrExpr(t);
+    ret->right = parse_logical_and_expr(next, err);
+    ret->left = left;
+  }
 }
 
 // ok
@@ -30,6 +248,7 @@ ASTExprNode *parse_assign_expr(TokenNode **next, Error &err) {
   return ret;
 }
 
+// ok
 ASTExprNode *parse_expr(TokenNode **next, Error &err) {
   return parse_assign_expr(next, err);
 }

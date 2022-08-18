@@ -1,8 +1,13 @@
 # Lup Compiler
 The compiler for Lup, which is the original programming language.
 
-## Grammer
+## TODO
+- make parser
+- use smart pointer
+- make analyzer
+- make generator
 
+## Grammer
 ```
 code:
   external-declaration
