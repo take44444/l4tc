@@ -1,575 +1,425 @@
 #include "lupc.h"
 
-// ok
-ASTExprNode *parse_primary_expr(TokenNode **next, Error &err) {
+shared_ptr<ASTTypeSpec> parse_type_spec(Token **next, Error &err) {
   // NULL check
-  if ((*next) == NULL) {
+  if (!*next) {
+    err = Error("expected type-specifier, found EOF");
+    return NULL;
+  }
+  Token *t;
+  if (
+    !!(t = consume_token_with_type(next, KwNum)) ||
+    !!(t = consume_token_with_type(next, KwStr)) ||
+    !!(t = consume_token_with_type(next, KwVoid))
+  ) {
+    return make_shared<ASTTypeSpec>(t);
+  }
+  err = Error("expected type-specifier, found ????");
+  return nullptr;
+}
+
+shared_ptr<ASTTypeSpec> parse_declaration_spec(Token **next, Error &err) {
+  return parse_type_spec(next, err);
+}
+
+shared_ptr<ASTExpr> parse_expr(Token **next, Error &err);
+shared_ptr<ASTExpr> parse_primary_expr(Token **next, Error &err) {
+  // NULL check
+  if (!(*next)) {
     err = Error("expected primary-expr, found EOF");
     return NULL;
   }
-  TokenNode *t;
-  ASTExprNode *ret;
+  Token *t;
   if (
     !!(t = consume_token_with_type(next, NumberConstant)) ||
     !!(t = consume_token_with_type(next, Ident))
   ) {
-    return new ASTSimpleExprNode(t);
+    return make_shared<ASTSimpleExpr>(t);
   }
-  if (!!(t = consume_token_with_str(next, "("))) {
-    ret = new ASTPrimaryExpr(t);
-    ret->expr = parse_expr(next, err);
-    // parse error
-    if (!ret->expr) {
-      delete ret;
-      return NULL;
-    }
-    if (!expect_token_with_str(next, err, ")")) return ret;
+  if (!!consume_token_with_str(next, "(")) {
+    shared_ptr<ASTPrimaryExpr> ret = make_shared<ASTPrimaryExpr>();
+    if (!(ret->expr = parse_expr(next, err))) return nullptr;
+    if (!!expect_token_with_str(next, err, ")")) return ret;
   }
   err = Error("expected primary-expr, found ????");
-  return NULL;
+  return nullptr;
 }
 
-// ok
-ASTExprNode *parse_postfix_expr(TokenNode **next, Error &err) {
+shared_ptr<ASTExpr> parse_assign_expr(Token **next, Error &err);
+shared_ptr<ASTExpr> parse_postfix_expr(Token **next, Error &err) {
 // function-call
 // array
 // increment
 // decrement
 // ->
 // .
-  ASTExprNode *primary = parse_primary_expr(next, err);
-  // parse error
-  if (!primary) return NULL;
-  TokenNode *t = consume_token_with_str(next, "(");
+  shared_ptr<ASTExpr> primary = parse_primary_expr(next, err);
+  if (!primary) return nullptr;
   // if "(" is not here, it is not function-call
   // but it is correct primary expr
-  if (!t) return primary;
+  if (!consume_token_with_str(next, "(")) return primary;
   // now it is assignment-expr
-  ASTFuncCallExprNode *ret = new ASTFuncCallExprNode(t);
+  shared_ptr<ASTFuncCallExpr> ret = make_shared<ASTFuncCallExpr>();
   ret->primary = primary;
-  ret->args = vector<ASTExprNode *>();
-  while (!(*next)->is_equal_with_str(")")) {
-    // parse arg
-    ASTExprNode *arg = parse_assign_expr(next, err);
-    // check parse error
-    if (!arg) {
-      for (ASTExprNode *p: ret->args) delete p;
-      delete primary;
-      delete ret;
-      return NULL;
-    }
+
+  shared_ptr<ASTExpr> arg;
+  while (!consume_token_with_str(next, ")")) {
+    if (!(arg = parse_assign_expr(next, err))) return nullptr;
     ret->args.push_back(arg);
-    // args end
-    if (consume_token_with_str(next, ",") == NULL) break;
-  }
-  // token ")" should be here
-  if (expect_token_with_str(next, err, ")") == NULL) {
-    for (ASTExprNode *p: ret->args) delete p;
-    delete primary;
-    delete ret;
-    return NULL;
+    if (!!consume_token_with_str(next, ",")) continue;
+    // end
+    if (!expect_token_with_str(next, err, ")")) return nullptr;
+    break;
   }
   return ret;
 }
 
-ASTExprNode *parse_unary_expr(TokenNode **next, Error &err) {
+shared_ptr<ASTExpr> parse_unary_expr(Token **next, Error &err) {
   return parse_postfix_expr(next, err);
 }
 
-// ok
-ASTExprNode *parse_multiplicative_expr(TokenNode **next, Error &err) {
-  ASTExprNode *left, *ret = parse_unary_expr(next, err);
-  // parse error
-  if (!ret) return NULL;
-  TokenNode *t;
+shared_ptr<ASTExpr> parse_multiplicative_expr(Token **next, Error &err) {
+  shared_ptr<ASTExpr> left, ret = parse_unary_expr(next, err);
+  if (!ret) return nullptr;
   while (
-    !!(t = consume_token_with_str(next, "*")) ||
-    !!(t = consume_token_with_str(next, "/")) ||
-    !!(t = consume_token_with_str(next, "%"))
+    !!consume_token_with_str(next, "*") ||
+    !!consume_token_with_str(next, "/") ||
+    !!consume_token_with_str(next, "%")
   ) {
     left = ret;
-    ret = new ASTMultiplicativeExpr(t);
-    ret->right = parse_unary_expr(next, err);
+    ret = make_shared<ASTMultiplicativeExpr>();
     ret->left = left;
+    if (!(ret->right = parse_unary_expr(next, err))) return nullptr;
   }
   return ret;
 }
 
-// ok
-ASTExprNode *parse_additive_expr(TokenNode **next, Error &err) {
-  ASTExprNode *left, *ret = parse_multiplicative_expr(next, err);
-  // parse error
-  if (!ret) return NULL;
-  TokenNode *t;
+shared_ptr<ASTExpr> parse_additive_expr(Token **next, Error &err) {
+  shared_ptr<ASTExpr> left, ret = parse_multiplicative_expr(next, err);
+  if (!ret) return nullptr;
   while (
-    !!(t = consume_token_with_str(next, "+")) ||
-    !!(t = consume_token_with_str(next, "-"))
+    !!consume_token_with_str(next, "+") ||
+    !!consume_token_with_str(next, "-")
   ) {
     left = ret;
-    ret = new ASTAdditiveExpr(t);
-    ret->right = parse_multiplicative_expr(next, err);
+    ret = make_shared<ASTAdditiveExpr>();
     ret->left = left;
+    if (!(ret->right = parse_multiplicative_expr(next, err))) return nullptr;
   }
   return ret;
 }
 
-// ok
-ASTExprNode *parse_shift_expr(TokenNode **next, Error &err) {
-  ASTExprNode *left, *ret = parse_additive_expr(next, err);
-  // parse error
-  if (!ret) return NULL;
-  TokenNode *t;
+shared_ptr<ASTExpr> parse_shift_expr(Token **next, Error &err) {
+  shared_ptr<ASTExpr> left, ret = parse_additive_expr(next, err);
+  if (!ret) return nullptr;
   while (
-    !!(t = consume_token_with_str(next, "<<")) ||
-    !!(t = consume_token_with_str(next, ">>"))
+    !!consume_token_with_str(next, "<<") ||
+    !!consume_token_with_str(next, ">>")
   ) {
     left = ret;
-    ret = new ASTShiftExpr(t);
-    ret->right = parse_additive_expr(next, err);
+    ret = make_shared<ASTShiftExpr>();
     ret->left = left;
+    if (!(ret->right = parse_additive_expr(next, err))) return nullptr;
   }
   return ret;
 }
 
-// ok
-ASTExprNode *parse_relational_expr(TokenNode **next, Error &err) {
-  ASTExprNode *left, *ret = parse_shift_expr(next, err);
-  // parse error
-  if (!ret) return NULL;
-  TokenNode *t;
+shared_ptr<ASTExpr> parse_relational_expr(Token **next, Error &err) {
+  shared_ptr<ASTExpr> left, ret = parse_shift_expr(next, err);
+  if (!ret) return nullptr;
   while (
-    !!(t = consume_token_with_str(next, "<")) ||
-    !!(t = consume_token_with_str(next, ">")) ||
-    !!(t = consume_token_with_str(next, "<=")) ||
-    !!(t = consume_token_with_str(next, ">="))
+    !!consume_token_with_str(next, "<") ||
+    !!consume_token_with_str(next, ">") ||
+    !!consume_token_with_str(next, "<=") ||
+    !!consume_token_with_str(next, ">=")
   ) {
     left = ret;
-    ret = new ASTRelationalExpr(t);
-    ret->right = parse_shift_expr(next, err);
+    ret = make_shared<ASTRelationalExpr>();
     ret->left = left;
+    if (!(ret->right = parse_shift_expr(next, err))) return nullptr;
   }
   return ret;
 }
 
-// ok
-ASTExprNode *parse_equality_expr(TokenNode **next, Error &err) {
-  ASTExprNode *left, *ret = parse_relational_expr(next, err);
-  // parse error
-  if (!ret) return NULL;
-  TokenNode *t;
+shared_ptr<ASTExpr> parse_equality_expr(Token **next, Error &err) {
+  shared_ptr<ASTExpr> left, ret = parse_relational_expr(next, err);
+  if (!ret) return nullptr;
   while (
-    !!(t = consume_token_with_str(next, "==")) ||
-    !!(t = consume_token_with_str(next, "!="))
+    !!consume_token_with_str(next, "==") ||
+    !!consume_token_with_str(next, "!=")
   ) {
     left = ret;
-    ret = new ASTEqualtyExpr(t);
-    ret->right = parse_relational_expr(next, err);
+    ret = make_shared<ASTEqualityExpr>();
     ret->left = left;
+    if (!(ret->right = parse_relational_expr(next, err))) return nullptr;
   }
   return ret;
 }
 
-// ok
-ASTExprNode *parse_bitwise_and_expr(TokenNode **next, Error &err) {
-  ASTExprNode *left, *ret = parse_equality_expr(next, err);
-  // parse error
-  if (!ret) return NULL;
-  TokenNode *t;
-  while (!!(t = consume_token_with_str(next, "&"))) {
+shared_ptr<ASTExpr> parse_bitwise_and_expr(Token **next, Error &err) {
+  shared_ptr<ASTExpr> left, ret = parse_equality_expr(next, err);
+  if (!ret) return nullptr;
+  while (!!consume_token_with_str(next, "^")) {
     left = ret;
-    ret = new ASTBitwiseAndExpr(t);
-    ret->right = parse_equality_expr(next, err);
+    ret = make_shared<ASTBitwiseAndExpr>();
     ret->left = left;
+    if (!(ret->right = parse_equality_expr(next, err))) return nullptr;
   }
   return ret;
 }
 
-// ok
-ASTExprNode *parse_bitwise_xor_expr(TokenNode **next, Error &err) {
-  ASTExprNode *left, *ret = parse_bitwise_and_expr(next, err);
-  // parse error
-  if (!ret) return NULL;
-  TokenNode *t;
-  while (!!(t = consume_token_with_str(next, "^"))) {
+shared_ptr<ASTExpr> parse_bitwise_xor_expr(Token **next, Error &err) {
+  shared_ptr<ASTExpr> left, ret = parse_bitwise_and_expr(next, err);
+  if (!ret) return nullptr;
+  while (!!consume_token_with_str(next, "^")) {
     left = ret;
-    ret = new ASTBitwiseXorExpr(t);
-    ret->right = parse_bitwise_and_expr(next, err);
+    ret = make_shared<ASTBitwiseXorExpr>();
     ret->left = left;
+    if (!(ret->right = parse_bitwise_and_expr(next, err))) return nullptr;
   }
   return ret;
 }
 
-// ok
-ASTExprNode *parse_bitwise_or_expr(TokenNode **next, Error &err) {
-  ASTExprNode *left, *ret = parse_bitwise_xor_expr(next, err);
-  // parse error
-  if (!ret) return NULL;
-  TokenNode *t;
-  while (!!(t = consume_token_with_str(next, "|"))) {
+shared_ptr<ASTExpr> parse_bitwise_or_expr(Token **next, Error &err) {
+  shared_ptr<ASTExpr> left, ret = parse_bitwise_xor_expr(next, err);
+  if (!ret) return nullptr;
+  while (!!consume_token_with_str(next, "|")) {
     left = ret;
-    ret = new ASTBitwiseOrExpr(t);
-    ret->right = parse_bitwise_xor_expr(next, err);
+    ret = make_shared<ASTBitwiseOrExpr>();
     ret->left = left;
+    if (!(ret->right = parse_bitwise_xor_expr(next, err))) return nullptr;
   }
   return ret;
 }
 
-// ok
-ASTExprNode *parse_logical_and_expr(TokenNode **next, Error &err) {
-  ASTExprNode *left, *ret = parse_bitwise_or_expr(next, err);
-  // parse error
-  if (!ret) return NULL;
-  TokenNode *t;
-  while (!!(t = consume_token_with_str(next, "&&"))) {
+shared_ptr<ASTExpr> parse_logical_and_expr(Token **next, Error &err) {
+  shared_ptr<ASTExpr> left, ret = parse_bitwise_or_expr(next, err);
+  if (!ret) return nullptr;
+  while (!!consume_token_with_str(next, "&&")) {
     left = ret;
-    ret = new ASTLogicalAndExpr(t);
-    ret->right = parse_bitwise_or_expr(next, err);
+    ret = make_shared<ASTLogicalAndExpr>();
     ret->left = left;
+    if (!(ret->right = parse_bitwise_or_expr(next, err))) return nullptr;
   }
   return ret;
 }
 
-// ok
-ASTExprNode *parse_logical_or_expr(TokenNode **next, Error &err) {
-  ASTExprNode *left, *ret = parse_logical_and_expr(next, err);
-  // parse error
-  if (!ret) return NULL;
-  TokenNode *t;
-  while (!!(t = consume_token_with_str(next, "||"))) {
+shared_ptr<ASTExpr> parse_logical_or_expr(Token **next, Error &err) {
+  shared_ptr<ASTExpr> left, ret = parse_logical_and_expr(next, err);
+  if (!ret) return nullptr;
+  while (!!consume_token_with_str(next, "||")) {
     left = ret;
-    ret = new ASTLogicalOrExpr(t);
-    ret->right = parse_logical_and_expr(next, err);
+    ret = make_shared<ASTLogicalOrExpr>();
     ret->left = left;
+    if (!(ret->right = parse_logical_and_expr(next, err))) return nullptr;
   }
   return ret;
 }
 
-// ok
-ASTExprNode *parse_assign_expr(TokenNode **next, Error &err) {
-  ASTExprNode *left = parse_logical_or_expr(next, err);
+shared_ptr<ASTExpr> parse_assign_expr(Token **next, Error &err) {
+  shared_ptr<ASTExpr> left = parse_logical_or_expr(next, err);
   // parse error
-  if (!left) return NULL;
+  if (!left) return nullptr;
   // if it is not unary-expr, it can't be left of assignment-expr
   // but it is correct expr
   if (!left->is_unary_expr()) return left;
-  TokenNode *t = consume_token_with_str(next, ":");
   // if ":" is not here, it is not assignment-expr
   // but it is correct expr
-  if (!t) return left;
+  if (!consume_token_with_str(next, ":")) return left;
   // now it is assignment-expr
-  ASTAssignExprNode *ret = new ASTAssignExprNode(t);
+  shared_ptr<ASTAssignExpr> ret = make_shared<ASTAssignExpr>();
   ret->left = left;
-  ret->right = parse_assign_expr(next, err);
-  // parse error
-  if (!ret->right) {
-    delete left;
-    delete ret;
-    return NULL;
-  }
+  if (!(ret->right = parse_assign_expr(next, err))) return nullptr;
   return ret;
 }
 
-// ok
-ASTExprNode *parse_expr(TokenNode **next, Error &err) {
+shared_ptr<ASTExpr> parse_expr(Token **next, Error &err) {
   return parse_assign_expr(next, err);
 }
 
-ASTExprStmtNode *parse_expr_stmt(TokenNode **next, Error &err) {
-  // parse expr
-  ASTExprNode *expr = parse_expr(next, err);
-  // check parse error
-  if (expr == NULL) return NULL;
-  // token LF should be here
-  TokenNode *t = expect_token_with_str(next, err, "\n");
-  if (t == NULL) return NULL;
-  ASTExprStmtNode *ret = new ASTExprStmtNode(t);
-  ret->expr = expr;
+shared_ptr<ASTExprStmt> parse_expr_stmt(Token **next, Error &err) {
+  shared_ptr<ASTExprStmt> ret = make_shared<ASTExprStmt>();
+  if (!(ret->expr = parse_expr(next, err))) return nullptr;
+  if (!expect_token_with_str(next, err, "\n")) return nullptr;
   return ret;
 }
 
-ASTReturnStmtNode *parse_return_stmt(TokenNode **next, Error &err) {
-  // token KwReturn should be here
-  TokenNode *t = expect_token_with_type(next, err, KwReturn);
-  if (t == NULL) return NULL;
-  ASTReturnStmtNode *ret = new ASTReturnStmtNode(t);
-  // parse expr
-  ret->expr = parse_expr(next, err);
-  // check parse error
-  if (ret->expr == NULL) {
-    delete ret;
-    return NULL;
-  }
-  if (expect_token_with_str(next, err, "\n") == NULL) {
-    delete ret;
-    return NULL;
-  }
+shared_ptr<ASTReturnStmt> parse_return_stmt(Token **next, Error &err) {
+  if (!expect_token_with_type(next, err, KwReturn)) return nullptr;
+  shared_ptr<ASTReturnStmt> ret = make_shared<ASTReturnStmt>();
+  if (!(ret->expr = parse_expr(next, err))) return nullptr;
+  if (!expect_token_with_str(next, err, "\n")) return nullptr;
   return ret;
 }
 
-ASTDeclaratorNode *parse_declarator(TokenNode **next, Error &err) {
+shared_ptr<ASTDeclarator> parse_declarator(Token **next, Error &err) {
+  // NULL check
+  if (!*next) {
+    err = Error("expected declarator, found EOF");
+    return NULL;
+  }
   // token Ident should be here
-  TokenNode *t = expect_token_with_type(next, err, Ident);
-  if (t == NULL) return NULL;
-  return new ASTDeclaratorNode(t);
+  Token *t = consume_token_with_type(next, Ident);
+  if (!t) {
+    err = Error("expected declarator, found ????");
+    return nullptr;
+  }
+  return make_shared<ASTDeclarator>(t);
 }
 
-ASTDeclarationNode *parse_declaration(TokenNode **next, Error &err) {
-  // NULL check
-  if ((*next) == NULL) {
-    err = Error("expected declaration, found EOF");
-    return NULL;
-  }
-  // parse type-specifer
-  TokenNode *t;
-  if (
-    (t = consume_token_with_type(next, KwNum)) == NULL &&
-    (t = expect_token_with_type(next, err, KwStr)) == NULL
-  ) return NULL;
-  ASTDeclarationNode *ret = new ASTDeclarationNode(t);
-  ret->declarators = vector<ASTDeclaratorNode *>();
-  while (1) {
-    // parse declarator
-    ASTDeclaratorNode *declarator = parse_declarator(next, err);
-    // check parse error
-    if (declarator == NULL) {
-      for (ASTDeclaratorNode *p: ret->declarators) delete p;
-      delete ret;
-      return NULL;
-    }
+shared_ptr<ASTDeclaration> parse_declaration(Token **next, Error &err) {
+  shared_ptr<ASTDeclaration> ret = make_shared<ASTDeclaration>();
+  if (!(ret->declaration_spec = parse_declaration_spec(next, err))) return nullptr;
+
+  shared_ptr<ASTDeclarator> declarator;
+  while (!!(declarator = parse_declarator(next, err))) {
     ret->declarators.push_back(declarator);
+    if (!!consume_token_with_str(next, ",")) continue;
     // declaration end
-    if (consume_token_with_str(next, "\n") != NULL) break;
-    // token "," should be here
-    if (expect_token_with_str(next, err, ",") == NULL) {
-      for (ASTDeclaratorNode *p: ret->declarators) delete p;
-      delete ret;
-      return NULL;
-    }
+    if (!!expect_token_with_str(next, err, "\n")) return ret;
+    break;
   }
+  err = Error("expected declarator, found ????");
+  return nullptr;
+}
+
+shared_ptr<ASTSimpleDeclaration> parse_simple_declaration(Token **next, Error &err) {
+// type-specifier declarator
+  shared_ptr<ASTSimpleDeclaration> ret = make_shared<ASTSimpleDeclaration>();
+  if (!(ret->type_spec = parse_type_spec(next, err))) return nullptr;
+  if (!(ret->declarator = parse_declarator(next, err))) return nullptr;
   return ret;
 }
 
-ASTDeclarationNode *parse_single_declaration(TokenNode **next, Error &err) {
+shared_ptr<ASTCompoundStmt> parse_comp_stmt(Token **next, Error &err, int indents);
+shared_ptr<AST> parse_stmt(Token **next, Error &err) {
   // NULL check
-  if ((*next) == NULL) {
-    err = Error("expected single-declaration, found EOF");
-    return NULL;
-  }
-  // parse type-specifer
-  TokenNode *t;
-  if (
-    (t = consume_token_with_type(next, KwNum)) == NULL &&
-    (t = expect_token_with_type(next, err, KwStr)) == NULL
-  ) return NULL;
-  ASTDeclarationNode *ret = new ASTDeclarationNode(t);
-  ret->declarators = vector<ASTDeclaratorNode *>();
-  // parse declarator
-  ASTDeclaratorNode *declarator = parse_declarator(next, err);
-  // check parse error
-  if (declarator == NULL) {
-    delete ret;
-    return NULL;
-  }
-  ret->declarators.push_back(declarator);
-  return ret;
-}
-
-ASTCompoundStmtNode *parse_comp_stmt(TokenNode **next, Error &err, int indents);
-ASTOtherStmtNode *parse_other_stmt(TokenNode **next, Error &err) {
-  // NULL check
-  if ((*next) == NULL) {
+  if (!*next) {
     err = Error("expected statement, found EOF");
     return NULL;
   }
-  ASTOtherStmtNode *ret;
-  switch ((*next)->type)
-  {
-  case KwBreak:
-    ret = new ASTBreakStmtNode(consume_token_with_type(next, KwBreak));
-    if (expect_token_with_str(next, err, "\n") == NULL) {
-      delete ret;
-      return NULL;
-    }
-    break;
-  case KwContinue:
-    ret = new ASTContinueStmtNode(consume_token_with_type(next, KwContinue));
-    if (expect_token_with_str(next, err, "\n") == NULL) {
-      delete ret;
-      return NULL;
-    }
-    break;
-  case KwReturn:
+  shared_ptr<AST> ret;
+  if (consume_token_with_type(next, KwBreak)) {
+    if (!expect_token_with_str(next, err, "\n")) return nullptr;
+    ret = make_shared<ASTBreakStmt>();
+  } else if (consume_token_with_type(next, KwContinue)) {
+    if (!expect_token_with_str(next, err, "\n")) return nullptr;
+    ret = make_shared<ASTContinueStmt>();
+  } else if ((*next)->type == KwReturn) {
     ret = parse_return_stmt(next, err);
-    break;
-  // case KwIf:
-  //   ret = parse_selection_stmt(next, err);
-  //   break;
-  // case KwLoop:
-  //   ret = parse_loop_stmt(next, err);
-  //   break;
-  default:
+  } else {
     ret = parse_expr_stmt(next, err);
+  } // TODO: if, loop
+  return ret;
+}
+
+shared_ptr<ASTCompoundStmt> parse_comp_stmt(Token **next, Error &err, int indents) {
+  // NULL check
+  if (!*next) {
+    err = Error("expected compound-stmt, found EOF");
+    return NULL;
+  }
+  shared_ptr<ASTCompoundStmt> ret = make_shared<ASTCompoundStmt>();
+  shared_ptr<AST> item;
+  while (1) {
+    if (!consume_token_with_indents(next, indents)) {
+      if (*((*next)->begin) != ' ' || (*next)->length < indents) {
+        // compound-stmt end
+        return ret;
+      } else {
+      // inner compound-stmt
+        if (!(item = parse_comp_stmt(next, err, indents + 2))) break;
+      }
+    } else if (
+      !(item = parse_declaration(next, err)) &&
+      !(item = parse_stmt(next, err))
+    ) {
+      break;
+    }
+    ret->items.push_back(item);
+  }
+  return nullptr;
+}
+
+shared_ptr<ASTFuncDeclarator> parse_func_declarator(Token **next, Error &err) {
+// declarator(declaration, ...)
+  shared_ptr<ASTFuncDeclarator> ret = make_shared<ASTFuncDeclarator>();
+  if (!(ret->declarator = parse_declarator(next, err))) return nullptr;
+  if (!expect_token_with_str(next, err, "(")) return nullptr;
+
+  shared_ptr<ASTSimpleDeclaration> declaration;
+  while (!consume_token_with_str(next, ")")) {
+    if (!(declaration = parse_simple_declaration(next, err))) return nullptr;
+    ret->args.push_back(declaration);
+    if (!!consume_token_with_str(next, ",")) continue;
+    // end
+    if (!expect_token_with_str(next, err, ")")) return nullptr;
     break;
   }
   return ret;
 }
 
-ASTCompoundStmtNode *parse_comp_stmt(TokenNode **next, Error &err, int indents) {
-  // NULL check
-  if (expect_token_with_type(next, err, Punctuator) == NULL) return NULL;
-  ASTCompoundStmtNode *ret = new ASTCompoundStmtNode(*next);
-  while (1) {
-    // token indent should be here
-    if (*((*next)->begin) != ' ') {
-      err = Error("expected indent, found ????");
-      for (ASTNode *p: ret->items) delete p;
-      delete ret;
-      return NULL;
-    }
-    if (consume_token_with_indents(next, indents) == NULL) {
-      if ((*next)->length > indents) {
-      // inner compound-stmt
-        // parse compound-stmt
-        ASTCompoundStmtNode *comp_stmt = parse_comp_stmt(next, err, indents + 2);
-        // check parse error
-        if (comp_stmt == NULL) {
-          for (ASTNode *p: ret->items) delete p;
-          delete ret;
-          return NULL;
-        }
-        ret->items.push_back(comp_stmt);
-      } else {
-      // compound-stmt end
-        break;
-      }
-    } else if ((*next)->type == KwNum || (*next)->type == KwStr) {
-    // declaration
-      // parse declaration
-      ASTDeclarationNode *declaration = parse_declaration(next, err);
-      // check parse error
-      if (declaration == NULL) {
-        for (ASTNode *p: ret->items) delete p;
-        delete ret;
-        return NULL;
-      }
-      ret->items.push_back(declaration);
-    } else {
-    // other-stmt
-      // parse other-stmt
-      ASTOtherStmtNode *other_stmt = parse_other_stmt(next, err);
-      // check parse error
-      if (other_stmt == NULL) {
-        for (ASTNode *p: ret->items) delete p;
-        delete ret;
-        return NULL;
-      }
-      ret->items.push_back(other_stmt);
-    }
-  }
-  return ret;
-}
-
-ASTFuncDeclaratorNode *parse_func_declarator(TokenNode **next, Error &err) {
-// ident(type ident, ...)
-  // token Ident should be here
-  TokenNode *t = expect_token_with_type(next, err, Ident);
-  if (t == NULL) return NULL;
-  ASTFuncDeclaratorNode *ret = new ASTFuncDeclaratorNode(t);
-  // token "(" should be here
-  if (expect_token_with_str(next, err, "(") == NULL) {
-    delete ret;
-    return NULL;
-  }
-  while (!(*next)->is_equal_with_str(")")) {
-    // parse single-declaration
-    ASTDeclarationNode *declaration = parse_single_declaration(next, err);
-    // check parse error
-    if (declaration == NULL) {
-      for (ASTDeclarationNode *p: ret->args) delete p;
-      delete ret;
-      return NULL;
-    }
-    ret->args.push_back(declaration);
-    // args end
-    if (consume_token_with_str(next, ",") == NULL) break;
-  }
-  // token ")" should be here
-  if (expect_token_with_str(next, err, ")") == NULL) {
-    for (ASTDeclarationNode *p: ret->args) delete p;
-    delete ret;
-    return NULL;
-  }
-  return ret;
-}
-
-ASTFuncDeclarationNode *parse_func_declaration(TokenNode **next, Error &err) {
+shared_ptr<ASTFuncDeclaration> parse_func_declaration(Token **next, Error &err) {
 // func-declarator -> type
-  // parse function-declarator
-  ASTFuncDeclaratorNode *declarator = parse_func_declarator(next, err);
-  // check parse error
-  if (declarator == NULL) return NULL;
+  shared_ptr<ASTFuncDeclaration> ret = make_shared<ASTFuncDeclaration>();
+  if (!(ret->declarator = parse_func_declarator(next, err))) return nullptr;
   // token "->" should be here
-  if (expect_token_with_str(next, err, "->") == NULL) return NULL;
-  // parse type-specifer
-  TokenNode *t;
-  if (
-    (t = consume_token_with_type(next, KwNum)) == NULL &&
-    (t = consume_token_with_type(next, KwStr)) == NULL &&
-    (t = expect_token_with_type(next, err, KwVoid)) == NULL
-  ) {
-    delete declarator;
-    return NULL;
-  }
+  if (!expect_token_with_str(next, err, "->")) return nullptr;
+  if (!(ret->type_spec = parse_type_spec(next, err))) return nullptr;
   // token LF should be here
-  if (expect_token_with_str(next, err, "\n") == NULL) {
-    delete declarator;
-    return NULL;
-  }
-  ASTFuncDeclarationNode *ret = new ASTFuncDeclarationNode(t);
-  ret->declarator = declarator;
+  if (!expect_token_with_str(next, err, "\n")) return nullptr;
   return ret;
 }
 
-ASTFuncDefNode *parse_func_def(TokenNode **next, Error &err) {
+shared_ptr<ASTFuncDef> parse_func_def(Token **next, Error &err) {
 // func-declaration compound-stmt
-  // token KwFunc should be here
-  TokenNode *t = expect_token_with_type(next, err, KwFunc);
-  if (t == NULL) return NULL;
-  ASTFuncDefNode *ret = new ASTFuncDefNode(t);
-  // parse function-declaration
-  ret->declaration = parse_func_declaration(next, err);
-  // check parse error
-  if (ret->declaration == NULL) {
-    delete ret;
-    return NULL;
+  if (!expect_token_with_type(next, err, KwFunc)) return nullptr;
+  shared_ptr<ASTFuncDef> ret = make_shared<ASTFuncDef>();
+  if (!(ret->declaration = parse_func_declaration(next, err))) return nullptr;
+  if (!(ret->body = parse_comp_stmt(next, err, 2))) return nullptr;
+  return ret;
+}
+
+shared_ptr<ASTExternalDeclaration> parse_external_declaration(Token **next, Error &err) {
+  shared_ptr<ASTExternalDeclaration> ret = make_shared<ASTExternalDeclaration>();
+  if (!(ret->declaration_spec = parse_declaration_spec(next, err))) return nullptr;
+
+  shared_ptr<ASTDeclarator> declarator;
+  while (!!(declarator = parse_declarator(next, err))) {
+    ret->declarators.push_back(declarator);
+    if (!!consume_token_with_str(next, ",")) continue;
+    // declaration end
+    if (!!expect_token_with_str(next, err, "\n")) return ret;
+    break;
   }
-  // parse compound-stmt
-  ret->body = parse_comp_stmt(next, err, 2);
-  // check parse error
-  if (ret->body == NULL) {
-    delete ret;
-    delete ret->declaration;
-    return NULL;
+  err = Error("expected declarator, found ????");
+  return nullptr;
+}
+
+shared_ptr<ASTTranslationUnit> parse_translation_unit(Token **next, Error &err) {
+  shared_ptr<ASTTranslationUnit> ret = make_shared<ASTTranslationUnit>();
+
+  shared_ptr<AST> external_declaration;
+  while (!!next) { // NULL check
+    if ((*next)->type == KwFunc) {
+      external_declaration = parse_func_def(next, err);
+    } else {
+      external_declaration = parse_external_declaration(next, err);
+    }
+    if (!external_declaration) return nullptr;
+    ret->external_declarations.push_back(external_declaration);
   }
   return ret;
 }
 
-ASTNode *parse_external_declaration(TokenNode **next, Error &err) {
-  if (
-    (*next) != NULL &&
-    (*next)->is_equal_with_str("func")
-  ) return parse_func_def(next, err);
-  else return parse_declaration(next, err);
-}
-
-void init_parser(TokenNode **head_token) {
+void init_parser(Token **head_token) {
   // *head_token can be NULL
-  TokenNode *next = *head_token;
-  TokenNode *t, *bef;
+  Token *next = *head_token;
+  Token *t, *bef;
   while (next != NULL) {
     // if next token is Delimiter, remove it and continue
     t = consume_token_with_type(&next, Delimiter);    
-    if (t == NULL) break;
+    if (!t) break;
     delete t;
   }
   // set new head_token
@@ -588,26 +438,15 @@ void init_parser(TokenNode **head_token) {
     while (next != NULL) {
       // if next token is Delimiter, remove it and continue
       t = consume_token_with_type(&next, Delimiter);
-      if (t == NULL) break;
+      if (!t) break;
       delete t;
     }
     bef->next = next;
   }
 }
 
-ASTNode * parse(TokenNode **head_token, Error &err) {
+shared_ptr<ASTTranslationUnit> parse(Token **head_token, Error &err) {
   init_parser(head_token);
-  TokenNode *next = *head_token;
-  // head AST node
-  ASTNode *head = parse_external_declaration(&next, err);
-  for (
-    ASTNode *external_declaration = head;;
-    external_declaration = parse_external_declaration(&next, err)
-  ) {
-    // check parse error
-    if (external_declaration == NULL) return NULL;
-    // if it was last node, finish
-    if (next == NULL) break;
-  }
-  return head;
+  Token *next = *head_token;
+  return parse_translation_unit(&next, err);
 }

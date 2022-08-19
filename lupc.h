@@ -36,14 +36,14 @@ enum TokenType {
   Unknown,        // unknown
 };
 
-class TokenNode {
+class Token {
   public:
   enum TokenType type;
-  TokenNode *next;
+  Token *next;
   char *begin;
   int length;
   int line;
-  TokenNode(int l, char *beg, int len, enum TokenType tp) {
+  Token(int l, char *beg, int len, enum TokenType tp) {
     line = l;
     begin = beg;
     length = len;
@@ -61,162 +61,243 @@ class TokenNode {
 };
 
 // utils.cpp
-TokenNode *expect_token_with_str(TokenNode **next, Error &err, string str);
-TokenNode *consume_token_with_str(TokenNode **next, string str);
-TokenNode *expect_token_with_type(TokenNode **next, Error &err, TokenType type);
-TokenNode *consume_token_with_type(TokenNode **next, TokenType type);
-TokenNode *consume_token_with_indents(TokenNode **next, int indents);
-TokenNode *expect_token_with_indents(TokenNode **next, Error &err, int indents);
+Token *expect_token_with_str(Token **next, Error &err, string str);
+Token *consume_token_with_str(Token **next, string str);
+Token *expect_token_with_type(Token **next, Error &err, TokenType type);
+Token *consume_token_with_type(Token **next, TokenType type);
+Token *consume_token_with_indents(Token **next, int indents);
+Token *expect_token_with_indents(Token **next, Error &err, int indents);
 
 // tokenizer.cpp
-TokenNode *create_next_token(char *p, int &line);
-void print_tokens(TokenNode *head);
-TokenNode *tokenize(string &source);
+Token *create_next_token(char *p, int &line);
+void print_tokens(Token *head);
+Token *tokenize(string &source);
 
 enum ASTType {
-  Declaration,
-  Declarator,
-  FuncDef,
-  FuncDeclaration,
-  FuncDeclarator,
+  TypeSpec,
+  SimpleExpr,
+  PrimaryExpr,
+  FuncCallExpr,
+  MultiplicativeExpr,
+  AdditiveExpr,
+  ShiftExpr,
+  RelationalExpr,
+  EqualityExpr,
+  BitwiseAndExpr,
+  BitwiseXorExpr,
+  BitwiseOrExpr,
+  LogicalAndExpr,
+  LogicalOrExpr,
+  AssignExpr,
+  ExprStmt,
   BreakStmt,
   ContinueStmt,
   ReturnStmt,
+  Declarator,
+  Declaration,
   CompoundStmt,
-  ExprStmt,
-  SelectionStmt,
-  LoopStmt,
+  FuncDeclarator,
+  FuncDeclaration,
+  FuncDef,
+  ExternalDeclaration,
+  TranslationUnit,
+
+  // SelectionStmt,
+  // LoopStmt,
 };
 
-class ASTNode {
+class AST {
   public:
-  TokenNode *op;
   ASTType type;
-  ASTNode(TokenNode *t, ASTType tp) : op(t), type(tp) {}
+  AST(ASTType tp) : type(tp) {}
   bool is_unary_expr() {
     return (
-      type == PostfixExpr ||
+      type == SimpleExpr ||
       type == PrimaryExpr ||
-      type == IdentExpr ||
-      type == StringLiteralExpr ||
-      type == NumberConstantExpr
+      type == FuncCallExpr
     );
   }
 };
 
-class ASTCompoundStmtNode : public ASTNode {
+class ASTTypeSpec : public AST {
   public:
-  vector<ASTNode *> items;
-  ASTCompoundStmtNode(TokenNode *t) : ASTNode(t, CompoundStmt) {
-    items = vector<ASTNode *>();
+  Token *op;
+  ASTTypeSpec(Token *t) : AST(TypeSpec), op(t) {}
+};
+
+class ASTExpr : public AST {
+  public:
+  shared_ptr<ASTExpr> left, right;
+  ASTExpr(ASTType tp) : AST(tp) {}
+};
+
+class ASTSimpleExpr : public ASTExpr {
+  public:
+  Token *op;
+  ASTSimpleExpr(Token *t) : ASTExpr(SimpleExpr), op(t) {}
+};
+
+class ASTPrimaryExpr : public ASTExpr {
+  public:
+  shared_ptr<ASTExpr> expr;
+  ASTPrimaryExpr() : ASTExpr(PrimaryExpr) {}
+};
+
+class ASTFuncCallExpr : public ASTExpr {
+  public:
+  shared_ptr<ASTExpr> primary;
+  vector<shared_ptr<ASTExpr>> args;
+  ASTFuncCallExpr() : ASTExpr(FuncCallExpr) {
+    args = vector<shared_ptr<ASTExpr>>();
   }
 };
 
-class ASTDeclaratorNode : public ASTNode {
+class ASTMultiplicativeExpr : public ASTExpr {
   public:
-  ASTDeclaratorNode(TokenNode *t) : ASTNode(t, Declarator) {}
+  ASTMultiplicativeExpr() : ASTExpr(MultiplicativeExpr) {}
 };
 
-class ASTDeclarationNode : public ASTNode {
+class ASTAdditiveExpr : public ASTExpr {
   public:
-  vector<ASTDeclaratorNode *> declarators;
-  ASTDeclarationNode(TokenNode *t) : ASTNode(t, Declaration) {}
+  ASTAdditiveExpr() : ASTExpr(AdditiveExpr) {}
 };
 
-class ASTFuncDeclaratorNode : public ASTNode {
+class ASTShiftExpr : public ASTExpr {
   public:
-  vector<ASTDeclarationNode *> args;
-  ASTFuncDeclaratorNode(TokenNode *t) : ASTNode(t, FuncDeclarator) {
-    args = vector<ASTDeclarationNode *>();
+  ASTShiftExpr() : ASTExpr(ShiftExpr) {}
+};
+
+class ASTRelationalExpr : public ASTExpr {
+  public:
+  ASTRelationalExpr() : ASTExpr(RelationalExpr) {}
+};
+
+class ASTEqualityExpr : public ASTExpr {
+  public:
+  ASTEqualityExpr() : ASTExpr(EqualityExpr) {}
+};
+
+class ASTBitwiseAndExpr : public ASTExpr {
+  public:
+  ASTBitwiseAndExpr() : ASTExpr(BitwiseAndExpr) {}
+};
+
+class ASTBitwiseXorExpr : public ASTExpr {
+  public:
+  ASTBitwiseXorExpr() : ASTExpr(BitwiseXorExpr) {}
+};
+
+class ASTBitwiseOrExpr : public ASTExpr {
+  public:
+  ASTBitwiseOrExpr() : ASTExpr(BitwiseOrExpr) {}
+};
+
+class ASTLogicalAndExpr : public ASTExpr {
+  public:
+  ASTLogicalAndExpr() : ASTExpr(LogicalAndExpr) {}
+};
+
+class ASTLogicalOrExpr : public ASTExpr {
+  public:
+  ASTLogicalOrExpr() : ASTExpr(LogicalOrExpr) {}
+};
+
+class ASTAssignExpr : public ASTExpr {
+  public:
+  ASTAssignExpr() : ASTExpr(AssignExpr) {}
+};
+
+class ASTExprStmt : public AST {
+  public:
+  shared_ptr<AST> expr;
+  ASTExprStmt() : AST(ExprStmt) {}
+};
+
+class ASTBreakStmt : public AST {
+  public:
+  ASTBreakStmt() : AST(BreakStmt) {}
+};
+
+class ASTContinueStmt : public AST {
+  public:
+  ASTContinueStmt() : AST(ContinueStmt) {}
+};
+
+class ASTReturnStmt : public AST {
+  public:
+  shared_ptr<AST> expr;
+  ASTReturnStmt() : AST(ReturnStmt) {}
+};
+
+class ASTDeclarator : public AST {
+  public:
+  Token *op;
+  ASTDeclarator(Token *t) : AST(Declarator), op(t) {}
+};
+
+class ASTDeclaration : public AST {
+  public:
+  shared_ptr<ASTTypeSpec> declaration_spec;
+  vector<shared_ptr<ASTDeclarator>> declarators;
+  ASTDeclaration() : AST(Declaration) {
+    declarators = vector<shared_ptr<ASTDeclarator>>();
   }
 };
 
-class ASTFuncDeclarationNode : public ASTNode {
+class ASTSimpleDeclaration : public AST {
   public:
-  ASTFuncDeclaratorNode *declarator;
-  ASTFuncDeclarationNode(TokenNode *t) : ASTNode(t, FuncDeclaration) {}
+  shared_ptr<ASTTypeSpec> type_spec;
+  shared_ptr<ASTDeclarator> declarator;
+  ASTSimpleDeclaration() : AST(Declaration) {}
 };
 
-class ASTFuncDefNode : public ASTNode {
+class ASTCompoundStmt : public AST {
   public:
-  ASTFuncDeclarationNode *declaration;
-  ASTCompoundStmtNode *body;
-  ASTFuncDefNode(TokenNode *t) : ASTNode(t, FuncDef) {}
+  vector<shared_ptr<AST>> items;
+  ASTCompoundStmt() : AST(CompoundStmt) {
+    items = vector<shared_ptr<AST>>();
+  }
 };
 
-class ASTOtherStmtNode : public ASTNode {
+class ASTFuncDeclarator : public AST {
   public:
-  ASTOtherStmtNode(TokenNode *t, ASTType tp) : ASTNode(t, tp) {}
+  shared_ptr<ASTDeclarator> declarator;
+  vector<shared_ptr<ASTSimpleDeclaration>> args;
+  ASTFuncDeclarator() : AST(FuncDeclarator) {
+    args = vector<shared_ptr<ASTSimpleDeclaration>>();
+  }
 };
 
-class ASTBreakStmtNode : public ASTOtherStmtNode {
+class ASTFuncDeclaration : public AST {
   public:
-  ASTBreakStmtNode(TokenNode *t) : ASTOtherStmtNode(t, BreakStmt) {}
+  shared_ptr<ASTTypeSpec> type_spec;
+  shared_ptr<ASTFuncDeclarator> declarator;
+  ASTFuncDeclaration() : AST(FuncDeclaration) {}
 };
 
-class ASTContinueStmtNode : public ASTOtherStmtNode {
+class ASTFuncDef : public AST {
   public:
-  ASTContinueStmtNode(TokenNode *t) : ASTOtherStmtNode(t, ContinueStmt) {}
+  shared_ptr<ASTFuncDeclaration> declaration;
+  shared_ptr<ASTCompoundStmt> body;
+  ASTFuncDef() : AST(FuncDef) {}
 };
 
-class ASTExprNode : public ASTNode {
+class ASTExternalDeclaration : public AST {
   public:
-  ASTExprNode(TokenNode *t, ASTType tp) : ASTNode(t, tp) {}
+  shared_ptr<ASTTypeSpec> declaration_spec;
+  vector<shared_ptr<ASTDeclarator>> declarators;
+  ASTExternalDeclaration() : AST(ExternalDeclaration) {
+    declarators = vector<shared_ptr<ASTDeclarator>>();
+  }
 };
 
-// class ASTBinOpNode : public ASTExprNode {
-//   public:
-//   ASTExprNode *left;
-//   ASTExprNode *right;
-//   ASTBinOpNode(TokenNode *t) : ASTExprNode(t, BinOp) {}
-// };
-
-// class ASTParenthesisExprNode : public ASTExprNode {
-
-// };
-
-// class ASTFuncCallNode : public ASTExprNode {
-
-// };
-
-// class ASTIdentExprNode : public ASTExprNode {
-
-// };
-
-// class ASTNumberConstantNode : public ASTExprNode {
-
-// };
-
-class ASTExprStmtNode : public ASTOtherStmtNode {
+class ASTTranslationUnit : public AST {
   public:
-  ASTExprNode *expr;
-  ASTExprStmtNode(TokenNode *t) : ASTOtherStmtNode(t, ExprStmt) {}
-};
-
-class ASTReturnStmtNode : public ASTOtherStmtNode {
-  public:
-  ASTExprNode *expr;
-  ASTReturnStmtNode(TokenNode *t) : ASTOtherStmtNode(t, ReturnStmt) {}
-};
-
-class ASTSelectionStmtNode : public ASTOtherStmtNode {
-  public:
-  ASTNode *cond;
-  ASTCompoundStmtNode *true_stmt;
-  ASTSelectionStmtNode *false_stmt;
-  ASTSelectionStmtNode(TokenNode *t) : ASTOtherStmtNode(t, SelectionStmt) {}
-};
-
-class ASTLoopStmtNode : public ASTOtherStmtNode {
-  public:
-  ASTNode *cond;
-  ASTCompoundStmtNode *true_stmt;
-  ASTLoopStmtNode(TokenNode *t) : ASTOtherStmtNode(t, LoopStmt) {}
+  vector<shared_ptr<AST>> external_declarations;
+  ASTTranslationUnit() : AST(TranslationUnit) {
+    external_declarations = vector<shared_ptr<AST>>();
+  }
 };
 
 // parser.cpp
-ASTFuncDeclaratorNode *parse_func_declarator(TokenNode **next, Error &err);
-ASTFuncDeclarationNode *parse_func_declaration(TokenNode **next, Error &err);
-ASTFuncDefNode *parse_func_def(TokenNode **next, Error &error);
-ASTNode *parse_external_declaration(TokenNode **next, Error &err);
-ASTNode *parse(TokenNode **head, Error &err);
+shared_ptr<ASTTranslationUnit> parse(Token **head, Error &err);

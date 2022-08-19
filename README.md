@@ -2,8 +2,6 @@
 The compiler for Lup, which is the original programming language.
 
 ## TODO
-- make parser
-- use smart pointer
 - make analyzer
 - make generator
 

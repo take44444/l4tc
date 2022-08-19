@@ -1,19 +1,19 @@
 #include "lupc.h"
 
-TokenNode *create_next_token_sub(char *p, int &line, bool is_indent) {
+Token *create_next_token_sub(char *p, int &line, bool is_indent) {
   assert(line);
   if (!*p) return NULL;
   if ('1' <= *p && *p <= '9') {
     int length = 0;
     while ('0' <= p[length] && p[length] <= '9') length++;
-    return new TokenNode(line, p, length, NumberConstant);
+    return new Token(line, p, length, NumberConstant);
   }
   if (('A' <= *p && *p <= 'Z') || ('a' <= *p && *p <= 'z') || *p == '_') {
     int length = 0;
     while (('A' <= p[length] && p[length] <= 'Z') ||
            ('a' <= p[length] && p[length] <= 'z') || p[length] == '_' ||
            ('0' <= p[length] && p[length] <= '9')) length++;
-    TokenNode *ret = new TokenNode(line, p, length, Ident);
+    Token *ret = new Token(line, p, length, Ident);
     if (ret->is_equal_with_str("break")) ret->type = KwBreak;            // break
     else if (ret->is_equal_with_str("continue")) ret->type = KwContinue; // continue
     else if (ret->is_equal_with_str("elif")) ret->type = KwElif;         // elif
@@ -28,44 +28,44 @@ TokenNode *create_next_token_sub(char *p, int &line, bool is_indent) {
     return ret;
   }
   if ('!' == *p && p[1] == '=') {
-    return new TokenNode(line, p, 2, Punctuator);                         // !=
+    return new Token(line, p, 2, Punctuator);                         // !=
   }
   if ('&' == *p) {
-    if (p[1] == '&') return new TokenNode(line, p, 2, Punctuator);        // &&
-    return new TokenNode(line, p, 1, Punctuator);                         // &
+    if (p[1] == '&') return new Token(line, p, 2, Punctuator);        // &&
+    return new Token(line, p, 1, Punctuator);                         // &
   }
   if ('|' == *p) {
-    if (p[1] == '|') return new TokenNode(line, p, 2, Punctuator);        // ||
-    return new TokenNode(line, p, 1, Punctuator);                         // |
+    if (p[1] == '|') return new Token(line, p, 2, Punctuator);        // ||
+    return new Token(line, p, 1, Punctuator);                         // |
   }
   if ('<' == *p) {
-    if (p[1] == '<') return new TokenNode(line, p, 2, Punctuator);        // <<
-    if (p[1] == '=') return new TokenNode(line, p, 2, Punctuator);        // <=
-    if (p[1] == '-') return new TokenNode(line, p, 2, Punctuator);        // <-
-    return new TokenNode(line, p, 1, Punctuator);                         // <
+    if (p[1] == '<') return new Token(line, p, 2, Punctuator);        // <<
+    if (p[1] == '=') return new Token(line, p, 2, Punctuator);        // <=
+    if (p[1] == '-') return new Token(line, p, 2, Punctuator);        // <-
+    return new Token(line, p, 1, Punctuator);                         // <
   }
   if ('>' == *p) {
-    if (p[1] == '>') return new TokenNode(line, p, 2, Punctuator);        // >>
-    if (p[1] == '=') return new TokenNode(line, p, 2, Punctuator);        // >=
-    return new TokenNode(line, p, 1, Punctuator);                         // >
+    if (p[1] == '>') return new Token(line, p, 2, Punctuator);        // >>
+    if (p[1] == '=') return new Token(line, p, 2, Punctuator);        // >=
+    return new Token(line, p, 1, Punctuator);                         // >
   }
   if ('-' == *p) {
-    if (p[1] == '>') return new TokenNode(line, p, 2, Punctuator);        // ->
-    return new TokenNode(line, p, 1, Punctuator);                         // -
+    if (p[1] == '>') return new Token(line, p, 2, Punctuator);        // ->
+    return new Token(line, p, 1, Punctuator);                         // -
   }
   if ('\n' == *p) {
     line++;
-    if ('\n' == p[1]) return new TokenNode(line, p, 1, Delimiter);
-    return new TokenNode(line, p, 1, Punctuator);
+    if ('\n' == p[1]) return new Token(line, p, 1, Delimiter);
+    return new Token(line, p, 1, Punctuator);
   }
   if (' ' == *p) {
-    if (!is_indent) return new TokenNode(line, p, 1, Delimiter);
+    if (!is_indent) return new Token(line, p, 1, Delimiter);
     int length = 0;
     while (' ' == p[length]) {
       if (' ' == p[++length]) length++;
-      else return new TokenNode(line, p, length, Unknown);
+      else return new Token(line, p, length, Unknown);
     }
-    return new TokenNode(line, p, length, Punctuator);
+    return new Token(line, p, length, Punctuator);
   }
   if ('=' == *p ||
       '^' == *p || '~' == *p ||
@@ -74,21 +74,21 @@ TokenNode *create_next_token_sub(char *p, int &line, bool is_indent) {
       '(' == *p || ')' == *p ||
       '[' == *p || ']' == *p ||
       ',' == *p) {
-    return new TokenNode(line, p, 1, Punctuator);
+    return new Token(line, p, 1, Punctuator);
   }
-  return new TokenNode(line, p, 1, Unknown);
+  return new Token(line, p, 1, Unknown);
 }
 
-TokenNode *create_next_token(char *p, int &line) {
+Token *create_next_token(char *p, int &line) {
   static bool is_indent = true;
-  TokenNode *ret = create_next_token_sub(p, line, is_indent);
+  Token *ret = create_next_token_sub(p, line, is_indent);
   is_indent = ret != NULL &&
               ret->is_equal_with_str("\n") && ret->type == Punctuator;
   return ret;
 }
 
-void print_tokens(TokenNode *head) {
-  for (TokenNode *next = head; next != NULL; next = next->next) {
+void print_tokens(Token *head) {
+  for (Token *next = head; next != NULL; next = next->next) {
     if (*next->begin == ' ')
       fprintf(stdout, "%d spaces ", next->length);
     else if (next->is_equal_with_str("\n"))
@@ -154,12 +154,12 @@ void print_tokens(TokenNode *head) {
   }
 }
 
-TokenNode *tokenize(string &source) {
-  TokenNode *head = NULL;
-  TokenNode **next = &head;
+Token *tokenize(string &source) {
+  Token *head = NULL;
+  Token **next = &head;
   int l = 1;
   char *p = &source[0];
-  for (TokenNode *t=create_next_token(p, l);t!=NULL;) {
+  for (Token *t=create_next_token(p, l);t!=NULL;) {
     *next = t;
     next = &t->next;
     p = t->begin + t->length;
