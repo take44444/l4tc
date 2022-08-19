@@ -3,9 +3,8 @@
 using namespace std;
 
 class Error {
-  private:
-  string err_str;
   public:
+  string err_str;
   Error(string err) {
     err_str = err;
   }

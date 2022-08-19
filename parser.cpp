@@ -4,7 +4,7 @@ shared_ptr<ASTTypeSpec> parse_type_spec(Token **next, Error &err) {
   // NULL check
   if (!*next) {
     err = Error("expected type-specifier, found EOF");
-    return NULL;
+    return nullptr;
   }
   Token *t;
   if (
@@ -27,7 +27,7 @@ shared_ptr<ASTExpr> parse_primary_expr(Token **next, Error &err) {
   // NULL check
   if (!(*next)) {
     err = Error("expected primary-expr, found EOF");
-    return NULL;
+    return nullptr;
   }
   Token *t;
   if (
@@ -256,7 +256,7 @@ shared_ptr<ASTDeclarator> parse_declarator(Token **next, Error &err) {
   // NULL check
   if (!*next) {
     err = Error("expected declarator, found EOF");
-    return NULL;
+    return nullptr;
   }
   // token Ident should be here
   Token *t = consume_token_with_type(next, Ident);
@@ -296,7 +296,7 @@ shared_ptr<AST> parse_stmt(Token **next, Error &err) {
   // NULL check
   if (!*next) {
     err = Error("expected statement, found EOF");
-    return NULL;
+    return nullptr;
   }
   shared_ptr<AST> ret;
   if (consume_token_with_type(next, KwBreak)) {
@@ -317,13 +317,13 @@ shared_ptr<ASTCompoundStmt> parse_comp_stmt(Token **next, Error &err, int indent
   // NULL check
   if (!*next) {
     err = Error("expected compound-stmt, found EOF");
-    return NULL;
+    return nullptr;
   }
   shared_ptr<ASTCompoundStmt> ret = make_shared<ASTCompoundStmt>();
   shared_ptr<AST> item;
   while (1) {
     if (!consume_token_with_indents(next, indents)) {
-      if (*((*next)->begin) != ' ' || (*next)->length < indents) {
+      if (!*next || *((*next)->begin) != ' ' || (*next)->length < indents) {
         // compound-stmt end
         return ret;
       } else {
@@ -400,7 +400,7 @@ shared_ptr<ASTTranslationUnit> parse_translation_unit(Token **next, Error &err) 
   shared_ptr<ASTTranslationUnit> ret = make_shared<ASTTranslationUnit>();
 
   shared_ptr<AST> external_declaration;
-  while (!!next) { // NULL check
+  while (!!*next) { // NULL check
     if ((*next)->type == KwFunc) {
       external_declaration = parse_func_def(next, err);
     } else {
@@ -416,7 +416,7 @@ void init_parser(Token **head_token) {
   // *head_token can be NULL
   Token *next = *head_token;
   Token *t, *bef;
-  while (next != NULL) {
+  while (!!next) {
     // if next token is Delimiter, remove it and continue
     t = consume_token_with_type(&next, Delimiter);    
     if (!t) break;
@@ -425,17 +425,17 @@ void init_parser(Token **head_token) {
   // set new head_token
   *head_token = next;
   // remove first LF punctuator
-  if (*head_token != NULL) {
+  if (!!*head_token) {
     t = consume_token_with_str(head_token, "\n");
-    if (t != NULL) delete t;
+    if (!t) delete t;
   }
   // *head_token can be NULL
   next = *head_token;
-  while (next != NULL) {
+  while (!!next) {
     bef = next;
     assert(bef->type != Delimiter);
     next = bef->next;
-    while (next != NULL) {
+    while (!!next) {
       // if next token is Delimiter, remove it and continue
       t = consume_token_with_type(&next, Delimiter);
       if (!t) break;

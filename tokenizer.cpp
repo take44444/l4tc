@@ -41,7 +41,6 @@ Token *create_next_token_sub(char *p, int &line, bool is_indent) {
   if ('<' == *p) {
     if (p[1] == '<') return new Token(line, p, 2, Punctuator);        // <<
     if (p[1] == '=') return new Token(line, p, 2, Punctuator);        // <=
-    if (p[1] == '-') return new Token(line, p, 2, Punctuator);        // <-
     return new Token(line, p, 1, Punctuator);                         // <
   }
   if ('>' == *p) {
@@ -67,7 +66,7 @@ Token *create_next_token_sub(char *p, int &line, bool is_indent) {
     }
     return new Token(line, p, length, Punctuator);
   }
-  if ('=' == *p ||
+  if (':' == *p || '=' == *p ||
       '^' == *p || '~' == *p ||
       '+' == *p ||
       '/' == *p || '*' == *p || '%' == *p ||
