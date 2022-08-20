@@ -6,10 +6,12 @@ int main() {
   string source = ost.str();
   Token *token_list = tokenize(source);
   Error error = Error("");
-  if (!parse(&token_list, error)) {
+  shared_ptr<AST> ast = parse(&token_list, error);
+  if (!ast) {
     print_tokens(token_list);
     printf("%s\n", &error.err_str[0]);
   }
+  print_ast(ast);
   // preprocess(token_list);
   // AST *ast = parse(token_list);
   // SymbolEntry *ctx = analyze(ast);

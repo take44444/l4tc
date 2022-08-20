@@ -1,11 +1,11 @@
 
-func a() -> num
-  num awd, wpodpo
-  a: 3
-  aw : (a+2+(f(a, 2, 23))) :2
+num g1, g2
 
-num awd, wpodpo
+func f(num x, num y) -> num
+  return x + y
 
-func a() -> num
-  a: 3
-  aw : (a+2+(f(a, 2, 23))) :2
+func main() -> void
+  num l1, l2
+  l1: 0
+  l2: g1: g2: 100000
+  l2: l1+52392*(f(l2, g1)-g2)

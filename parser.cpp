@@ -445,6 +445,253 @@ void init_parser(Token **head_token) {
   }
 }
 
+template <typename T> void print_ast_vec(vector<shared_ptr<T>> &v, int depth) {
+  fprintf(stderr, "[");
+  if (v.size() == 0) {
+    fprintf(stderr, "]");
+    return;
+  }
+  for (int i=0; i < (int)v.size(); i++) {
+    fprintf(stderr, "%s\n", i ? "," : "");
+    for (int j_ = 0; j_ < depth + 1; j_++) fputc(' ', stderr);
+    print_ast_sub(v.at(i), depth + 1);
+  }
+  fprintf(stderr, "\n");
+  for (int i_ = 0; i_ < depth; i_++) fputc(' ', stderr);
+  fprintf(stderr, "]");
+}
+
+void print_ast_sub(shared_ptr<AST> n, int depth) {
+  if (n->type == TypeSpec) {
+    shared_ptr<ASTTypeSpec> nn = dynamic_pointer_cast<ASTTypeSpec>(n);
+    fprintf(stderr, "TypeSpec<%.*s>", nn->op->length, nn->op->begin);
+    return;
+  }
+  if (n->type == SimpleExpr) {
+    shared_ptr<ASTSimpleExpr> nn = dynamic_pointer_cast<ASTSimpleExpr>(n);
+    fprintf(stderr, "SimpleExpr<%.*s>", nn->op->length, nn->op->begin);
+    return;
+  }
+  if (n->type == PrimaryExpr) {
+    shared_ptr<ASTPrimaryExpr> nn = dynamic_pointer_cast<ASTPrimaryExpr>(n);
+    fprintf(stderr, "PrimaryExpr(e=");
+    print_ast_sub(nn->expr, depth);
+    fprintf(stderr, ")");
+    return;
+  }
+  if (n->type == FuncCallExpr) {
+    shared_ptr<ASTFuncCallExpr> nn = dynamic_pointer_cast<ASTFuncCallExpr>(n);
+    fprintf(stderr, "FuncCallExpr(p=");
+    print_ast_sub(nn->primary, depth);
+    fprintf(stderr, ", args=");
+    print_ast_vec(nn->args, depth);
+    fprintf(stderr, ")");
+    return;
+  }
+  if (n->type == MultiplicativeExpr) {
+    shared_ptr<ASTMultiplicativeExpr> nn = dynamic_pointer_cast<ASTMultiplicativeExpr>(n);
+    fprintf(stderr, "MultiplicativeExpr(l=");
+    print_ast_sub(nn->left, depth);
+    fprintf(stderr, ", r=");
+    print_ast_sub(nn->right, depth);
+    fprintf(stderr, ")");
+    return;
+  }
+  if (n->type == AdditiveExpr) {
+    shared_ptr<ASTAdditiveExpr> nn = dynamic_pointer_cast<ASTAdditiveExpr>(n);
+    fprintf(stderr, "AdditiveExpr(l=");
+    print_ast_sub(nn->left, depth);
+    fprintf(stderr, ", r=");
+    print_ast_sub(nn->right, depth);
+    fprintf(stderr, ")");
+    return;
+  }
+  if (n->type == ShiftExpr) {
+    shared_ptr<ASTShiftExpr> nn = dynamic_pointer_cast<ASTShiftExpr>(n);
+    fprintf(stderr, "ShiftExpr(l=");
+    print_ast_sub(nn->left, depth);
+    fprintf(stderr, ", r=");
+    print_ast_sub(nn->right, depth);
+    fprintf(stderr, ")");
+    return;
+  }
+  if (n->type == RelationalExpr) {
+    shared_ptr<ASTRelationalExpr> nn = dynamic_pointer_cast<ASTRelationalExpr>(n);
+    fprintf(stderr, "RelationalExpr(l=");
+    print_ast_sub(nn->left, depth);
+    fprintf(stderr, ", r=");
+    print_ast_sub(nn->right, depth);
+    fprintf(stderr, ")");
+    return;
+  }
+  if (n->type == EqualityExpr) {
+    shared_ptr<ASTEqualityExpr> nn = dynamic_pointer_cast<ASTEqualityExpr>(n);
+    fprintf(stderr, "EqualityExpr(l=");
+    print_ast_sub(nn->left, depth);
+    fprintf(stderr, ", r=");
+    print_ast_sub(nn->right, depth);
+    fprintf(stderr, ")");
+    return;
+  }
+  if (n->type == BitwiseAndExpr) {
+    shared_ptr<ASTBitwiseAndExpr> nn = dynamic_pointer_cast<ASTBitwiseAndExpr>(n);
+    fprintf(stderr, "BitwiseAndExpr(l=");
+    print_ast_sub(nn->left, depth);
+    fprintf(stderr, ", r=");
+    print_ast_sub(nn->right, depth);
+    fprintf(stderr, ")");
+    return;
+  }
+  if (n->type == BitwiseXorExpr) {
+    shared_ptr<ASTBitwiseXorExpr> nn = dynamic_pointer_cast<ASTBitwiseXorExpr>(n);
+    fprintf(stderr, "BitwiseXorExpr(l=");
+    print_ast_sub(nn->left, depth);
+    fprintf(stderr, ", r=");
+    print_ast_sub(nn->right, depth);
+    fprintf(stderr, ")");
+    return;
+  }
+  if (n->type == BitwiseOrExpr) {
+    shared_ptr<ASTBitwiseOrExpr> nn = dynamic_pointer_cast<ASTBitwiseOrExpr>(n);
+    fprintf(stderr, "BitwiseOrExpr(l=");
+    print_ast_sub(nn->left, depth);
+    fprintf(stderr, ", r=");
+    print_ast_sub(nn->right, depth);
+    fprintf(stderr, ")");
+    return;
+  }
+  if (n->type == LogicalAndExpr) {
+    shared_ptr<ASTLogicalAndExpr> nn = dynamic_pointer_cast<ASTLogicalAndExpr>(n);
+    fprintf(stderr, "LogicalAndExpr(l=");
+    print_ast_sub(nn->left, depth);
+    fprintf(stderr, ", r=");
+    print_ast_sub(nn->right, depth);
+    fprintf(stderr, ")");
+    return;
+  }
+  if (n->type == LogicalOrExpr) {
+    shared_ptr<ASTLogicalOrExpr> nn = dynamic_pointer_cast<ASTLogicalOrExpr>(n);
+    fprintf(stderr, "LogicalOrExpr(l=");
+    print_ast_sub(nn->left, depth);
+    fprintf(stderr, ", r=");
+    print_ast_sub(nn->right, depth);
+    fprintf(stderr, ")");
+    return;
+  }
+  if (n->type == AssignExpr) {
+    shared_ptr<ASTAssignExpr> nn = dynamic_pointer_cast<ASTAssignExpr>(n);
+    fprintf(stderr, "AssignExpr(l=");
+    print_ast_sub(nn->left, depth);
+    fprintf(stderr, ", r=");
+    print_ast_sub(nn->right, depth);
+    fprintf(stderr, ")");
+    return;
+  }
+  if (n->type == ExprStmt) {
+    shared_ptr<ASTExprStmt> nn = dynamic_pointer_cast<ASTExprStmt>(n);
+    fprintf(stderr, "ExprStmt(expr=");
+    print_ast_sub(nn->expr, depth);
+    fprintf(stderr, ")");
+    return;
+  }
+  if (n->type == BreakStmt) {
+    shared_ptr<ASTBreakStmt> nn = dynamic_pointer_cast<ASTBreakStmt>(n);
+    fprintf(stderr, "BreakStmt");
+    return;
+  }
+  if (n->type == ContinueStmt) {
+    shared_ptr<ASTContinueStmt> nn = dynamic_pointer_cast<ASTContinueStmt>(n);
+    fprintf(stderr, "ContinueStmt");
+    return;
+  }
+  if (n->type == ReturnStmt) {
+    shared_ptr<ASTReturnStmt> nn = dynamic_pointer_cast<ASTReturnStmt>(n);
+    fprintf(stderr, "ReturnStmt(expr=");
+    print_ast_sub(nn->expr, depth);
+    fprintf(stderr, ")");
+    return;
+  }
+  if (n->type == Declarator) {
+    shared_ptr<ASTDeclarator> nn = dynamic_pointer_cast<ASTDeclarator>(n);
+    fprintf(stderr, "Declarator<%.*s>", nn->op->length, nn->op->begin);
+    return;
+  }
+  if (n->type == Declaration) {
+    shared_ptr<ASTDeclaration> nn = dynamic_pointer_cast<ASTDeclaration>(n);
+    fprintf(stderr, "Declaration(ds=");
+    print_ast_sub(nn->declaration_spec, depth);
+    fprintf(stderr, ", d-list=");
+    print_ast_vec(nn->declarators, depth);
+    fprintf(stderr, ")");
+    return;
+  }
+  if (n->type == SimpleDeclaration) {
+    shared_ptr<ASTSimpleDeclaration> nn = dynamic_pointer_cast<ASTSimpleDeclaration>(n);
+    fprintf(stderr, "SimpleDeclaration(ts=");
+    print_ast_sub(nn->type_spec, depth);
+    fprintf(stderr, ", d=");
+    print_ast_sub(nn->declarator, depth);
+    fprintf(stderr, ")");
+    return;
+  }
+  if (n->type == CompoundStmt) {
+    shared_ptr<ASTCompoundStmt> nn = dynamic_pointer_cast<ASTCompoundStmt>(n);
+    fprintf(stderr, "CompoundStmt(item-list=");
+    print_ast_vec(nn->items, depth);
+    fprintf(stderr, ")");
+    return;
+  }
+  if (n->type == FuncDeclarator) {
+    shared_ptr<ASTFuncDeclarator> nn = dynamic_pointer_cast<ASTFuncDeclarator>(n);
+    fprintf(stderr, "FuncDeclarator(d=");
+    print_ast_sub(nn->declarator, depth);
+    fprintf(stderr, ", args=");
+    print_ast_vec(nn->args, depth);
+    fprintf(stderr, ")");
+    return;
+  }
+  if (n->type == FuncDeclaration) {
+    shared_ptr<ASTFuncDeclaration> nn = dynamic_pointer_cast<ASTFuncDeclaration>(n);
+    fprintf(stderr, "FuncDeclaration(ts=");
+    print_ast_sub(nn->type_spec, depth);
+    fprintf(stderr, ", d=");
+    print_ast_sub(nn->declarator, depth);
+    fprintf(stderr, ")");
+    return;
+  }
+  if (n->type == FuncDef) {
+    shared_ptr<ASTFuncDef> nn = dynamic_pointer_cast<ASTFuncDef>(n);
+    fprintf(stderr, "FuncDef(d=");
+    print_ast_sub(nn->declaration, depth);
+    fprintf(stderr, ", body=");
+    print_ast_sub(nn->body, depth);
+    fprintf(stderr, ")");
+    return;
+  }
+  if (n->type == ExternalDeclaration) {
+    shared_ptr<ASTExternalDeclaration> nn = dynamic_pointer_cast<ASTExternalDeclaration>(n);
+    fprintf(stderr, "ExternalDeclaration(ds=");
+    print_ast_sub(nn->declaration_spec, depth);
+    fprintf(stderr, ", d-list=");
+    print_ast_vec(nn->declarators, depth);
+    fprintf(stderr, ")");
+    return;
+  }
+  if (n->type == TranslationUnit) {
+    shared_ptr<ASTTranslationUnit> nn = dynamic_pointer_cast<ASTTranslationUnit>(n);
+    fprintf(stderr, "TranslationUnit(ed-list=");
+    print_ast_vec(nn->external_declarations, depth);
+    fprintf(stderr, ")");
+    return;
+  }
+  assert(false);
+}
+
+void print_ast(shared_ptr<AST> n) {
+  print_ast_sub(n, 0);
+  fputc('\n', stderr);
+}
+
 shared_ptr<ASTTranslationUnit> parse(Token **head_token, Error &err) {
   init_parser(head_token);
   Token *next = *head_token;

@@ -3,7 +3,7 @@
 Token *create_next_token_sub(char *p, int &line, bool is_indent) {
   assert(line);
   if (!*p) return NULL;
-  if ('1' <= *p && *p <= '9') {
+  if ('0' <= *p && *p <= '9') {
     int length = 0;
     while ('0' <= p[length] && p[length] <= '9') length++;
     return new Token(line, p, length, NumberConstant);
@@ -89,63 +89,63 @@ Token *create_next_token(char *p, int &line) {
 void print_tokens(Token *head) {
   for (Token *next = head; next != NULL; next = next->next) {
     if (*next->begin == ' ')
-      fprintf(stdout, "%d spaces ", next->length);
+      fprintf(stderr, "%d spaces ", next->length);
     else if (next->is_equal_with_str("\n"))
-      fprintf(stdout, "code: LF ");
+      fprintf(stderr, "code: LF ");
     else
-      fprintf(stdout, "code: %.*s ", next->length, next->begin);
+      fprintf(stderr, "code: %.*s ", next->length, next->begin);
     switch (next->type)
     {
       case Delimiter:
-        fprintf(stdout, "type: Delimiter\n");
+        fprintf(stderr, "type: Delimiter\n");
         break;
       case Punctuator:
-        fprintf(stdout, "type: Punctuator\n");
+        fprintf(stderr, "type: Punctuator\n");
         break;
       case NumberConstant:
-        fprintf(stdout, "type: NumberConstant\n");
+        fprintf(stderr, "type: NumberConstant\n");
         break;
       case StringLiteral:
-        fprintf(stdout, "type: StringLiteral\n");
+        fprintf(stderr, "type: StringLiteral\n");
         break;
       case Ident:
-        fprintf(stdout, "type: Ident\n");
+        fprintf(stderr, "type: Ident\n");
         break;
       case KwBreak:
-        fprintf(stdout, "type: KwBreak\n");
+        fprintf(stderr, "type: KwBreak\n");
         break;
       case KwContinue:
-        fprintf(stdout, "type: KwContinue\n");
+        fprintf(stderr, "type: KwContinue\n");
         break;
       case KwElif:
-        fprintf(stdout, "type: KwElif\n");
+        fprintf(stderr, "type: KwElif\n");
         break;
       case KwElse:
-        fprintf(stdout, "type: KwElse\n");
+        fprintf(stderr, "type: KwElse\n");
         break;
       case KwFunc:
-        fprintf(stdout, "type: KwFunc\n");
+        fprintf(stderr, "type: KwFunc\n");
         break;
       case KwIf:
-        fprintf(stdout, "type: KwIf\n");
+        fprintf(stderr, "type: KwIf\n");
         break;
       case KwLoop:
-        fprintf(stdout, "type: KwLoop\n");
+        fprintf(stderr, "type: KwLoop\n");
         break;
       case KwNum:
-        fprintf(stdout, "type: KwNum\n");
+        fprintf(stderr, "type: KwNum\n");
         break;
       case KwReturn:
-        fprintf(stdout, "type: KwReturn\n");
+        fprintf(stderr, "type: KwReturn\n");
         break;
       case KwStr:
-        fprintf(stdout, "type: KwStr\n");
+        fprintf(stderr, "type: KwStr\n");
         break;
       case KwVoid:
-        fprintf(stdout, "type: KwVoid\n");
+        fprintf(stderr, "type: KwVoid\n");
         break;
       case Unknown:
-        fprintf(stdout, "type: Unknown\n");
+        fprintf(stderr, "type: Unknown\n");
         break;
       default:
         break;

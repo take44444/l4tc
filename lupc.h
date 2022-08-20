@@ -94,6 +94,7 @@ enum ASTType {
   ReturnStmt,
   Declarator,
   Declaration,
+  SimpleDeclaration,
   CompoundStmt,
   FuncDeclarator,
   FuncDeclaration,
@@ -116,6 +117,7 @@ class AST {
       type == FuncCallExpr
     );
   }
+  virtual ~AST() = default;
 };
 
 class ASTTypeSpec : public AST {
@@ -247,7 +249,7 @@ class ASTSimpleDeclaration : public AST {
   public:
   shared_ptr<ASTTypeSpec> type_spec;
   shared_ptr<ASTDeclarator> declarator;
-  ASTSimpleDeclaration() : AST(Declaration) {}
+  ASTSimpleDeclaration() : AST(SimpleDeclaration) {}
 };
 
 class ASTCompoundStmt : public AST {
@@ -300,3 +302,4 @@ class ASTTranslationUnit : public AST {
 
 // parser.cpp
 shared_ptr<ASTTranslationUnit> parse(Token **head, Error &err);
+void print_ast(shared_ptr<AST> n);
