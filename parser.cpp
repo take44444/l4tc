@@ -684,7 +684,6 @@ void print_ast_sub(shared_ptr<AST> n, int depth) {
     fprintf(stderr, ")");
     return;
   }
-  assert(false);
 }
 
 void print_ast(shared_ptr<AST> n) {

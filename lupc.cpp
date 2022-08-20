@@ -10,8 +10,9 @@ int main() {
   if (!ast) {
     print_tokens(token_list);
     printf("%s\n", &error.err_str[0]);
+  } else {
+    print_ast(ast);
   }
-  print_ast(ast);
   // preprocess(token_list);
   // AST *ast = parse(token_list);
   // SymbolEntry *ctx = analyze(ast);
