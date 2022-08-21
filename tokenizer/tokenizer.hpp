@@ -28,59 +28,29 @@ namespace tokenizer {
     Unknown,        // unknown
   };
 
+  std::string to_string(TokenType type);
+
   class Token {
     public:
     int line;
-    std::string_view sv;
     enum TokenType type;
     Token *next;
-    Token(int l, std::string_view s, enum TokenType tp)
-    : line(l), sv(s), type(tp), next(NULL) {}
-    std::string to_string() {
-      switch (next->type)
-      {
-        case Delimiter:
-          return "Delimiter";
-        case Punctuator:
-          return "Punctuator";
-        case NumberConstant:
-          return "NumberConstant";
-        case StringLiteral:
-          return "StringLiteral";
-        case Ident:
-          return "Ident";
-        case KwBreak:
-          return "KwBreak";
-        case KwContinue:
-          return "KwContinue";
-        case KwElif:
-          return "KwElif";
-        case KwElse:
-          return "KwElse";
-        case KwFunc:
-          return "KwFunc";
-        case KwIf:
-          return "KwIf";
-        case KwLoop:
-          return "KwLoop";
-        case KwNum:
-          return "KwNum";
-        case KwReturn:
-          return "KwReturn";
-        case KwStr:
-          return "KwStr";
-        case KwVoid:
-          return "KwVoid";
-        case Unknown:
-          return "Unknown";
-        default:
-          return "????";
-      }
+    std::string_view sv;
+    char *line_begin;
+    int pos;
+    Token(int l, char *src, char *beg, int len, enum TokenType tp)
+    : line(l), type(tp), next(NULL) {
+      sv = std::string_view(beg).substr(0, len);
+      for (
+        line_begin = beg;
+        src < line_begin && line_begin[-1] != '\n';
+        line_begin--
+      );
+      for (pos = 0; line_begin + pos <= beg; pos++);
     }
   };
 
   // tokenizer.cpp
-  Token *create_next_token(char *p, int &line);
   void print_tokens(Token *head);
   Token *tokenize(std::string &source);
 }

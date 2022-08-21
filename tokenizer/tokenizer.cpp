@@ -1,20 +1,62 @@
 #include "./tokenizer.hpp"
 
 namespace tokenizer {
-  Token *create_next_token_sub(char *p, int &line, bool is_indent) {
+  std::string to_string(TokenType type) {
+    switch (type)
+    {
+      case Delimiter:
+        return "Delimiter";
+      case Punctuator:
+        return "Punctuator";
+      case NumberConstant:
+        return "NumberConstant";
+      case StringLiteral:
+        return "StringLiteral";
+      case Ident:
+        return "Ident";
+      case KwBreak:
+        return "KwBreak";
+      case KwContinue:
+        return "KwContinue";
+      case KwElif:
+        return "KwElif";
+      case KwElse:
+        return "KwElse";
+      case KwFunc:
+        return "KwFunc";
+      case KwIf:
+        return "KwIf";
+      case KwLoop:
+        return "KwLoop";
+      case KwNum:
+        return "KwNum";
+      case KwReturn:
+        return "KwReturn";
+      case KwStr:
+        return "KwStr";
+      case KwVoid:
+        return "KwVoid";
+      case Unknown:
+        return "Unknown";
+      default:
+        return "????";
+    }
+  }
+
+  Token *create_next_token_sub(char *src, char *p, int &line, bool is_indent) {
     assert(line);
     if (!*p) return NULL;
     if ('0' <= *p && *p <= '9') {
-      int length = 0;
-      while ('0' <= p[length] && p[length] <= '9') length++;
-      return new Token(line, std::string_view(p).substr(0, length), NumberConstant);
+      int len = 0;
+      while ('0' <= p[len] && p[len] <= '9') len++;
+      return new Token(line, src, p, len, NumberConstant);
     }
     if (('A' <= *p && *p <= 'Z') || ('a' <= *p && *p <= 'z') || *p == '_') {
-      int length = 0;
-      while (('A' <= p[length] && p[length] <= 'Z') ||
-            ('a' <= p[length] && p[length] <= 'z') || p[length] == '_' ||
-            ('0' <= p[length] && p[length] <= '9')) length++;
-      Token *ret = new Token(line, std::string_view(p).substr(0, length), Ident);
+      int len = 0;
+      while (('A' <= p[len] && p[len] <= 'Z') ||
+            ('a' <= p[len] && p[len] <= 'z') || p[len] == '_' ||
+            ('0' <= p[len] && p[len] <= '9')) len++;
+      Token *ret = new Token(line, src, p, len, Ident);
       if (ret->sv == "break") ret->type = KwBreak;            // break
       else if (ret->sv == "continue") ret->type = KwContinue; // continue
       else if (ret->sv == "elif") ret->type = KwElif;         // elif
@@ -29,43 +71,43 @@ namespace tokenizer {
       return ret;
     }
     if ('!' == *p && p[1] == '=') {
-      return new Token(line, std::string_view(p).substr(0, 2), Punctuator);                         // !=
+      return new Token(line, src, p, 2, Punctuator);                         // !=
     }
     if ('&' == *p) {
-      if (p[1] == '&') return new Token(line, std::string_view(p).substr(0, 2), Punctuator);        // &&
-      return new Token(line, std::string_view(p).substr(0, 1), Punctuator);                         // &
+      if (p[1] == '&') return new Token(line, src, p, 2, Punctuator);        // &&
+      return new Token(line, src, p, 1, Punctuator);                         // &
     }
     if ('|' == *p) {
-      if (p[1] == '|') return new Token(line, std::string_view(p).substr(0, 2), Punctuator);        // ||
-      return new Token(line, std::string_view(p).substr(0, 2), Punctuator);                         // |
+      if (p[1] == '|') return new Token(line, src, p, 2, Punctuator);        // ||
+      return new Token(line, src, p, 2, Punctuator);                         // |
     }
     if ('<' == *p) {
-      if (p[1] == '<') return new Token(line, std::string_view(p).substr(0, 2), Punctuator);        // <<
-      if (p[1] == '=') return new Token(line, std::string_view(p).substr(0, 2), Punctuator);        // <=
-      return new Token(line, std::string_view(p).substr(0, 1), Punctuator);                         // <
+      if (p[1] == '<') return new Token(line, src, p, 2, Punctuator);        // <<
+      if (p[1] == '=') return new Token(line, src, p, 2, Punctuator);        // <=
+      return new Token(line, src, p, 1, Punctuator);                         // <
     }
     if ('>' == *p) {
-      if (p[1] == '>') return new Token(line, std::string_view(p).substr(0, 2), Punctuator);        // >>
-      if (p[1] == '=') return new Token(line, std::string_view(p).substr(0, 2), Punctuator);        // >=
-      return new Token(line, std::string_view(p).substr(0, 1), Punctuator);                         // >
+      if (p[1] == '>') return new Token(line, src, p, 2, Punctuator);        // >>
+      if (p[1] == '=') return new Token(line, src, p, 2, Punctuator);        // >=
+      return new Token(line, src, p, 1, Punctuator);                         // >
     }
     if ('-' == *p) {
-      if (p[1] == '>') return new Token(line, std::string_view(p).substr(0, 2), Punctuator);        // ->
-      return new Token(line, std::string_view(p).substr(0, 1), Punctuator);                         // -
+      if (p[1] == '>') return new Token(line, src, p, 2, Punctuator);        // ->
+      return new Token(line, src, p, 1, Punctuator);                         // -
     }
     if ('\n' == *p) {
       line++;
-      if ('\n' == p[1]) return new Token(line, std::string_view(p).substr(0, 1), Delimiter);
-      return new Token(line, std::string_view(p).substr(0, 1), Punctuator);
+      if ('\n' == p[1]) return new Token(line-1, src, p, 1, Delimiter);
+      return new Token(line-1, src, p, 1, Punctuator);
     }
     if (' ' == *p) {
-      if (!is_indent) return new Token(line, std::string_view(p).substr(0, 1), Delimiter);
-      int length = 0;
-      while (' ' == p[length]) {
-        if (' ' == p[++length]) length++;
-        else return new Token(line, std::string_view(p).substr(0, length), Unknown);
+      if (!is_indent) return new Token(line, src, p, 1, Delimiter);
+      int len = 0;
+      while (' ' == p[len]) {
+        if (' ' == p[++len]) len++;
+        else return new Token(line, src, p, len, Unknown);
       }
-      return new Token(line, std::string_view(p).substr(0, length), Punctuator);
+      return new Token(line, src, p, len, Punctuator);
     }
     if (':' == *p || '=' == *p ||
         '^' == *p || '~' == *p ||
@@ -74,14 +116,14 @@ namespace tokenizer {
         '(' == *p || ')' == *p ||
         '[' == *p || ']' == *p ||
         ',' == *p) {
-      return new Token(line, std::string_view(p).substr(0, 1), Punctuator);
+      return new Token(line, src, p, 1, Punctuator);
     }
-    return new Token(line, std::string_view(p).substr(0, 1), Unknown);
+    return new Token(line, src, p, 1, Unknown);
   }
 
-  Token *create_next_token(char *p, int &line) {
+  Token *create_next_token(char *src, char *p, int &line) {
     static bool is_indent = true;
-    Token *ret = create_next_token_sub(p, line, is_indent);
+    Token *ret = create_next_token_sub(src, p, line, is_indent);
     is_indent = ret != NULL &&
                 ret->sv == "\n" && ret->type == Punctuator;
     return ret;
@@ -93,10 +135,10 @@ namespace tokenizer {
       if (next->sv.front() == ' ')
         std::cerr << next->sv.length() << " spaces ";
       else if (next->sv == "\n")
-        fprintf(stderr, "LF ");
+        std::cerr << "LF ";
       else
-        std::cerr << next->sv;
-      std::cerr << "type: " << next->to_string();      
+        std::cerr << next->sv << " ";
+      std::cerr << "type: " << to_string(next->type) << std::endl;      
     }
   }
 
@@ -105,11 +147,11 @@ namespace tokenizer {
     Token **next = &head;
     int l = 1;
     char *p = &source[0];
-    for (Token *t=create_next_token(p, l);t!=NULL;) {
+    for (Token *t=create_next_token(&source[0], p, l);t!=NULL;) {
       *next = t;
       next = &t->next;
       p += t->sv.length();
-      t = create_next_token(p, l);
+      t = create_next_token(&source[0], p, l);
     }
     return head;
   }

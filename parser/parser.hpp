@@ -6,9 +6,21 @@
 namespace parser {
   class Error {
     public:
-    std::string str;
-    Error(std::string err) {
-      str = err;
+    tokenizer::Token *token;
+    std::string message;
+    explicit Error(std::string expected, std::string found, tokenizer::Token *t) : token(t) {
+      message = "error: expected " + expected + ", found " + found;
+    }
+    std::string get_error_string() {
+      std::string ret = "line:" + std::to_string(token->line) +
+                        "/pos:" + std::to_string(token->pos) +
+                        ": " + message + '\n';
+      for (char *p = token->line_begin; *p && *p != '\n'; ret += *p++);
+      ret += '\n';
+      for (int i_ = 1; i_ < (int)token->pos; i_++) ret += ' ';
+      ret += '^';
+      for (int i_ = 1; i_ < (int)token->sv.length(); i_++) ret += '~';
+      return ret;
     }
   };
 

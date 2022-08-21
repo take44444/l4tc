@@ -4,13 +4,12 @@ namespace parser {
   std::shared_ptr<ASTTypeSpec> parse_type_spec(tokenizer::Token **next, Error &err) {
     tokenizer::Token *t;
     if (
-      (t = consume_token_with_type(next, tokenizer::KwNum)) ||
-      (t = consume_token_with_type(next, tokenizer::KwStr)) ||
-      (t = consume_token_with_type(next, tokenizer::KwVoid))
+      (t = expect_token_with_type(next, err, tokenizer::KwNum)) ||
+      (t = expect_token_with_type(next, err, tokenizer::KwStr)) ||
+      (t = expect_token_with_type(next, err, tokenizer::KwVoid))
     ) {
       return std::make_shared<ASTTypeSpec>(t);
     }
-    err = Error("expected type-specifier, found ????");
     return nullptr;
   }
 
@@ -21,18 +20,16 @@ namespace parser {
   std::shared_ptr<ASTExpr> parse_expr(tokenizer::Token **next, Error &err);
   std::shared_ptr<ASTExpr> parse_primary_expr(tokenizer::Token **next, Error &err) {
     tokenizer::Token *t;
-    if (
-      (t = consume_token_with_type(next, tokenizer::NumberConstant)) ||
-      (t = consume_token_with_type(next, tokenizer::Ident))
-    ) {
-      return std::make_shared<ASTSimpleExpr>(t);
-    }
-    if (consume_token_with_str(next, "(")) {
+    if (expect_token_with_str(next, err, "(")) {
       std::shared_ptr<ASTPrimaryExpr> ret = std::make_shared<ASTPrimaryExpr>();
       if (!(ret->expr = parse_expr(next, err))) return nullptr;
       if (expect_token_with_str(next, err, ")")) return ret;
+    } else if (
+      (t = expect_token_with_type(next, err, tokenizer::NumberConstant)) ||
+      (t = expect_token_with_type(next, err, tokenizer::Ident))
+    ) {
+      return std::make_shared<ASTSimpleExpr>(t);
     }
-    err = Error("expected primary-expr, found ????");
     return nullptr;
   }
 
@@ -48,16 +45,16 @@ namespace parser {
     if (!primary) return nullptr;
     // if "(" is not here, it is not function-call
     // but it is correct primary expr
-    if (!consume_token_with_str(next, "(")) return primary;
+    if (!expect_token_with_str(next, err, "(")) return primary;
     // now it is assignment-expr
     std::shared_ptr<ASTFuncCallExpr> ret = std::make_shared<ASTFuncCallExpr>();
     ret->primary = primary;
 
     std::shared_ptr<ASTExpr> arg;
-    while (!consume_token_with_str(next, ")")) {
+    while (!expect_token_with_str(next, err, ")")) {
       if (!(arg = parse_assign_expr(next, err))) return nullptr;
       ret->args.push_back(arg);
-      if (consume_token_with_str(next, ",")) continue;
+      if (expect_token_with_str(next, err, ",")) continue;
       // end
       if (!expect_token_with_str(next, err, ")")) return nullptr;
       break;
@@ -73,9 +70,9 @@ namespace parser {
     std::shared_ptr<ASTExpr> left, ret = parse_unary_expr(next, err);
     if (!ret) return nullptr;
     while (
-      consume_token_with_str(next, "*") ||
-      consume_token_with_str(next, "/") ||
-      consume_token_with_str(next, "%")
+      expect_token_with_str(next, err, "*") ||
+      expect_token_with_str(next, err, "/") ||
+      expect_token_with_str(next, err, "%")
     ) {
       left = ret;
       ret = std::make_shared<ASTMultiplicativeExpr>();
@@ -89,8 +86,8 @@ namespace parser {
     std::shared_ptr<ASTExpr> left, ret = parse_multiplicative_expr(next, err);
     if (!ret) return nullptr;
     while (
-      consume_token_with_str(next, "+") ||
-      consume_token_with_str(next, "-")
+      expect_token_with_str(next, err, "+") ||
+      expect_token_with_str(next, err, "-")
     ) {
       left = ret;
       ret = std::make_shared<ASTAdditiveExpr>();
@@ -104,8 +101,8 @@ namespace parser {
     std::shared_ptr<ASTExpr> left, ret = parse_additive_expr(next, err);
     if (!ret) return nullptr;
     while (
-      consume_token_with_str(next, "<<") ||
-      consume_token_with_str(next, ">>")
+      expect_token_with_str(next, err, "<<") ||
+      expect_token_with_str(next, err, ">>")
     ) {
       left = ret;
       ret = std::make_shared<ASTShiftExpr>();
@@ -119,10 +116,10 @@ namespace parser {
     std::shared_ptr<ASTExpr> left, ret = parse_shift_expr(next, err);
     if (!ret) return nullptr;
     while (
-      consume_token_with_str(next, "<") ||
-      consume_token_with_str(next, ">") ||
-      consume_token_with_str(next, "<=") ||
-      consume_token_with_str(next, ">=")
+      expect_token_with_str(next, err, "<") ||
+      expect_token_with_str(next, err, ">") ||
+      expect_token_with_str(next, err, "<=") ||
+      expect_token_with_str(next, err, ">=")
     ) {
       left = ret;
       ret = std::make_shared<ASTRelationalExpr>();
@@ -136,8 +133,8 @@ namespace parser {
     std::shared_ptr<ASTExpr> left, ret = parse_relational_expr(next, err);
     if (!ret) return nullptr;
     while (
-      consume_token_with_str(next, "==") ||
-      consume_token_with_str(next, "!=")
+      expect_token_with_str(next, err, "==") ||
+      expect_token_with_str(next, err, "!=")
     ) {
       left = ret;
       ret = std::make_shared<ASTEqualityExpr>();
@@ -150,7 +147,7 @@ namespace parser {
   std::shared_ptr<ASTExpr> parse_bitwise_and_expr(tokenizer::Token **next, Error &err) {
     std::shared_ptr<ASTExpr> left, ret = parse_equality_expr(next, err);
     if (!ret) return nullptr;
-    while (consume_token_with_str(next, "^")) {
+    while (expect_token_with_str(next, err, "^")) {
       left = ret;
       ret = std::make_shared<ASTBitwiseAndExpr>();
       ret->left = left;
@@ -162,7 +159,7 @@ namespace parser {
   std::shared_ptr<ASTExpr> parse_bitwise_xor_expr(tokenizer::Token **next, Error &err) {
     std::shared_ptr<ASTExpr> left, ret = parse_bitwise_and_expr(next, err);
     if (!ret) return nullptr;
-    while (consume_token_with_str(next, "^")) {
+    while (expect_token_with_str(next, err, "^")) {
       left = ret;
       ret = std::make_shared<ASTBitwiseXorExpr>();
       ret->left = left;
@@ -174,7 +171,7 @@ namespace parser {
   std::shared_ptr<ASTExpr> parse_bitwise_or_expr(tokenizer::Token **next, Error &err) {
     std::shared_ptr<ASTExpr> left, ret = parse_bitwise_xor_expr(next, err);
     if (!ret) return nullptr;
-    while (consume_token_with_str(next, "|")) {
+    while (expect_token_with_str(next, err, "|")) {
       left = ret;
       ret = std::make_shared<ASTBitwiseOrExpr>();
       ret->left = left;
@@ -186,7 +183,7 @@ namespace parser {
   std::shared_ptr<ASTExpr> parse_logical_and_expr(tokenizer::Token **next, Error &err) {
     std::shared_ptr<ASTExpr> left, ret = parse_bitwise_or_expr(next, err);
     if (!ret) return nullptr;
-    while (consume_token_with_str(next, "&&")) {
+    while (expect_token_with_str(next, err, "&&")) {
       left = ret;
       ret = std::make_shared<ASTLogicalAndExpr>();
       ret->left = left;
@@ -198,7 +195,7 @@ namespace parser {
   std::shared_ptr<ASTExpr> parse_logical_or_expr(tokenizer::Token **next, Error &err) {
     std::shared_ptr<ASTExpr> left, ret = parse_logical_and_expr(next, err);
     if (!ret) return nullptr;
-    while (consume_token_with_str(next, "||")) {
+    while (expect_token_with_str(next, err, "||")) {
       left = ret;
       ret = std::make_shared<ASTLogicalOrExpr>();
       ret->left = left;
@@ -216,7 +213,7 @@ namespace parser {
     if (!is_unary_expr(left)) return left;
     // if ":" is not here, it is not assignment-expr
     // but it is correct expr
-    if (!consume_token_with_str(next, ":")) return left;
+    if (!expect_token_with_str(next, err, ":")) return left;
     // now it is assignment-expr
     std::shared_ptr<ASTAssignExpr> ret = std::make_shared<ASTAssignExpr>();
     ret->left = left;
@@ -236,11 +233,8 @@ namespace parser {
   }
 
   std::shared_ptr<ASTDeclarator> parse_declarator(tokenizer::Token **next, Error &err) {
-    tokenizer::Token *t = consume_token_with_type(next, tokenizer::Ident);
-    if (!t) {
-      err = Error("expected declarator, found ????");
-      return nullptr;
-    }
+    tokenizer::Token *t = expect_token_with_type(next, err, tokenizer::Ident);
+    if (!t) return nullptr;
     return std::make_shared<ASTDeclarator>(t);
   }
 
@@ -251,12 +245,11 @@ namespace parser {
     std::shared_ptr<ASTDeclarator> declarator;
     while ((declarator = parse_declarator(next, err))) {
       ret->declarators.push_back(declarator);
-      if (consume_token_with_str(next, ",")) continue;
+      if (expect_token_with_str(next, err, ",")) continue;
       // declaration end
       if (expect_token_with_str(next, err, "\n")) return ret;
       break;
     }
-    err = Error("expected declarator, found ????");
     return nullptr;
   }
 
@@ -270,15 +263,15 @@ namespace parser {
 
   std::shared_ptr<ASTCompoundStmt> parse_comp_stmt(tokenizer::Token **next, Error &err, int indents);
   std::shared_ptr<AST> parse_stmt(tokenizer::Token **next, Error &err) {
-    if (consume_token_with_type(next, tokenizer::KwBreak)) {
+    if (expect_token_with_type(next, err, tokenizer::KwBreak)) {
       if (!expect_token_with_str(next, err, "\n")) return nullptr;
       return std::make_shared<ASTBreakStmt>();
     }
-    if (consume_token_with_type(next, tokenizer::KwContinue)) {
+    if (expect_token_with_type(next, err, tokenizer::KwContinue)) {
       if (!expect_token_with_str(next, err, "\n")) return nullptr;
       return std::make_shared<ASTContinueStmt>();
     }
-    if (consume_token_with_type(next, tokenizer::KwReturn)) {
+    if (expect_token_with_type(next, err, tokenizer::KwReturn)) {
       std::shared_ptr<ASTReturnStmt> ret = std::make_shared<ASTReturnStmt>();
       if (!(ret->expr = parse_expr(next, err))) return nullptr;
       if (!expect_token_with_str(next, err, "\n")) return nullptr;
@@ -318,10 +311,10 @@ namespace parser {
     if (!expect_token_with_str(next, err, "(")) return nullptr;
 
     std::shared_ptr<ASTSimpleDeclaration> declaration;
-    while (!consume_token_with_str(next, ")")) {
+    while (!expect_token_with_str(next, err, ")")) {
       if (!(declaration = parse_simple_declaration(next, err))) return nullptr;
       ret->args.push_back(declaration);
-      if (consume_token_with_str(next, ",")) continue;
+      if (expect_token_with_str(next, err, ",")) continue;
       // end
       if (!expect_token_with_str(next, err, ")")) return nullptr;
       break;
@@ -357,12 +350,11 @@ namespace parser {
     std::shared_ptr<ASTDeclarator> declarator;
     while ((declarator = parse_declarator(next, err))) {
       ret->declarators.push_back(declarator);
-      if (consume_token_with_str(next, ",")) continue;
+      if (expect_token_with_str(next, err, ",")) continue;
       // declaration end
       if (expect_token_with_str(next, err, "\n")) return ret;
       break;
     }
-    err = Error("expected declarator, found ????");
     return nullptr;
   }
 
@@ -371,10 +363,9 @@ namespace parser {
 
     std::shared_ptr<AST> external_declaration;
     while (*next) {
-      if (
-        !(external_declaration = parse_func_def(next, err)) &&
-        !(external_declaration = parse_external_declaration(next, err))
-      ) return nullptr;
+      if ((*next)->sv == "func") external_declaration = parse_func_def(next, err);
+      else external_declaration = parse_external_declaration(next, err);
+      if (!external_declaration) return nullptr;
       ret->external_declarations.push_back(external_declaration);
     }
     return ret;

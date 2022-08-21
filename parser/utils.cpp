@@ -1,4 +1,5 @@
 #include "./parser.hpp"
+
 namespace parser {
   bool is_unary_expr(std::shared_ptr<AST> node) {
     return (
@@ -9,13 +10,12 @@ namespace parser {
   }
 
   tokenizer::Token *expect_token_with_str(tokenizer::Token **next, Error &err, std::string str) {
-    // NULL check
     if (!*next) {
-      err = Error("expected ????, found EOF");
+      err = Error(str, "EOF", *next);
       return NULL;
     }
     if ((*next)->sv != str) {
-      err = Error("expected ????, found ????");
+      err = Error(str, std::string((*next)->sv), *next);
       return NULL;
     }
     tokenizer::Token *ret = *next;
@@ -33,11 +33,11 @@ namespace parser {
 
   tokenizer::Token *expect_token_with_type(tokenizer::Token **next, Error &err, tokenizer::TokenType type) {
     if (!*next) {
-      err = Error("expected ????, found EOF");
+      err = Error("type " + tokenizer::to_string(type), "EOF", *next);
       return NULL;
     }
     if ((*next)->type != type) {
-      err = Error("expected ????, found ????");
+      err = Error("type " + tokenizer::to_string(type), "type " + tokenizer::to_string((*next)->type), *next);
       return NULL;
     }
     tokenizer::Token *ret = *next;
