@@ -24,11 +24,12 @@ namespace tokenizer {
     KwReturn,       // return
     KwStr,          // str
     KwVoid,         // void
-    // 予期しない文字
+    // Unexpected Token
     Unknown,        // unknown
   };
 
   std::string to_string(TokenType type);
+  std::string to_ast_string(TokenType type);
 
   class Token {
     public:

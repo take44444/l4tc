@@ -33,11 +33,14 @@ namespace parser {
 
   tokenizer::Token *expect_token_with_type(tokenizer::Token **next, Error &err, tokenizer::TokenType type) {
     if (!*next) {
-      err = Error("type " + tokenizer::to_string(type), "EOF", *next);
+      err = Error("type " + tokenizer::to_ast_string(type), "EOF", *next);
       return NULL;
     }
     if ((*next)->type != type) {
-      err = Error("type " + tokenizer::to_string(type), "type " + tokenizer::to_string((*next)->type), *next);
+      err = Error(
+        "type " + tokenizer::to_ast_string(type),
+        "type " + tokenizer::to_ast_string((*next)->type), *next
+      );
       return NULL;
     }
     tokenizer::Token *ret = *next;

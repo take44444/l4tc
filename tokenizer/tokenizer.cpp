@@ -43,6 +43,44 @@ namespace tokenizer {
     }
   }
 
+  std::string to_ast_string(TokenType type) {
+    switch (type)
+    {
+      case Punctuator:
+        return "punctuator";
+      case NumberConstant:
+        return "number-constant";
+      case StringLiteral:
+        return "string-literal";
+      case Ident:
+        return "identifier";
+      case KwBreak:
+        return "break-statement";
+      case KwContinue:
+        return "continue-statement";
+      case KwElif:
+        return "elif-statement";
+      case KwElse:
+        return "else-statement";
+      case KwFunc:
+        return "function-definition";
+      case KwIf:
+        return "if-statement";
+      case KwLoop:
+        return "loop-statement";
+      case KwNum:
+        return "type-specifier";
+      case KwReturn:
+        return "return-statement";
+      case KwStr:
+        return "type-specifier";
+      case KwVoid:
+        return "type-specifier";
+      default:
+        return "unknown";
+    }
+  }
+
   Token *create_next_token_sub(char *src, char *p, int &line, bool is_indent) {
     assert(line);
     if (!*p) return NULL;
