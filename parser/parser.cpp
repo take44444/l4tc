@@ -213,7 +213,7 @@ namespace parser {
     if (!left) return nullptr;
     // if it is not unary-expr, it can't be left of assignment-expr
     // but it is correct expr
-    if (!left->is_unary_expr()) return left;
+    if (!is_unary_expr(left)) return left;
     // if ":" is not here, it is not assignment-expr
     // but it is correct expr
     if (!consume_token_with_str(next, ":")) return left;

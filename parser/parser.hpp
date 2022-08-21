@@ -12,175 +12,132 @@ namespace parser {
     }
   };
 
-  enum ASTType {
-    TypeSpec,
-    SimpleExpr,
-    PrimaryExpr,
-    FuncCallExpr,
-    MultiplicativeExpr,
-    AdditiveExpr,
-    ShiftExpr,
-    RelationalExpr,
-    EqualityExpr,
-    BitwiseAndExpr,
-    BitwiseXorExpr,
-    BitwiseOrExpr,
-    LogicalAndExpr,
-    LogicalOrExpr,
-    AssignExpr,
-    ExprStmt,
-    BreakStmt,
-    ContinueStmt,
-    ReturnStmt,
-    Declarator,
-    Declaration,
-    SimpleDeclaration,
-    CompoundStmt,
-    FuncDeclarator,
-    FuncDeclaration,
-    FuncDef,
-    ExternalDeclaration,
-    TranslationUnit,
-
-    // SelectionStmt,
-    // LoopStmt,
-  };
-
   class AST {
     public:
-    ASTType type;
-    AST(ASTType tp) : type(tp) {}
-    bool is_unary_expr() {
-      return (
-        type == SimpleExpr ||
-        type == PrimaryExpr ||
-        type == FuncCallExpr
-      );
-    }
     virtual ~AST() = default;
   };
 
   class ASTTypeSpec : public AST {
     public:
     tokenizer::Token *op;
-    ASTTypeSpec(tokenizer::Token *t) : AST(TypeSpec), op(t) {}
+    ASTTypeSpec(tokenizer::Token *t) : AST(), op(t) {}
   };
 
   class ASTExpr : public AST {
     public:
     std::shared_ptr<ASTExpr> left, right;
-    ASTExpr(ASTType tp) : AST(tp) {}
+    ASTExpr() : AST() {}
   };
 
   class ASTSimpleExpr : public ASTExpr {
     public:
     tokenizer::Token *op;
-    ASTSimpleExpr(tokenizer::Token *t) : ASTExpr(SimpleExpr), op(t) {}
+    ASTSimpleExpr(tokenizer::Token *t) : ASTExpr(), op(t) {}
   };
 
   class ASTPrimaryExpr : public ASTExpr {
     public:
     std::shared_ptr<ASTExpr> expr;
-    ASTPrimaryExpr() : ASTExpr(PrimaryExpr) {}
+    ASTPrimaryExpr() : ASTExpr() {}
   };
 
   class ASTFuncCallExpr : public ASTExpr {
     public:
     std::shared_ptr<ASTExpr> primary;
     std::vector<std::shared_ptr<ASTExpr>> args;
-    ASTFuncCallExpr() : ASTExpr(FuncCallExpr) {
+    ASTFuncCallExpr() : ASTExpr() {
       args = std::vector<std::shared_ptr<ASTExpr>>();
     }
   };
 
   class ASTMultiplicativeExpr : public ASTExpr {
     public:
-    ASTMultiplicativeExpr() : ASTExpr(MultiplicativeExpr) {}
+    ASTMultiplicativeExpr() : ASTExpr() {}
   };
 
   class ASTAdditiveExpr : public ASTExpr {
     public:
-    ASTAdditiveExpr() : ASTExpr(AdditiveExpr) {}
+    ASTAdditiveExpr() : ASTExpr() {}
   };
 
   class ASTShiftExpr : public ASTExpr {
     public:
-    ASTShiftExpr() : ASTExpr(ShiftExpr) {}
+    ASTShiftExpr() : ASTExpr() {}
   };
 
   class ASTRelationalExpr : public ASTExpr {
     public:
-    ASTRelationalExpr() : ASTExpr(RelationalExpr) {}
+    ASTRelationalExpr() : ASTExpr() {}
   };
 
   class ASTEqualityExpr : public ASTExpr {
     public:
-    ASTEqualityExpr() : ASTExpr(EqualityExpr) {}
+    ASTEqualityExpr() : ASTExpr() {}
   };
 
   class ASTBitwiseAndExpr : public ASTExpr {
     public:
-    ASTBitwiseAndExpr() : ASTExpr(BitwiseAndExpr) {}
+    ASTBitwiseAndExpr() : ASTExpr() {}
   };
 
   class ASTBitwiseXorExpr : public ASTExpr {
     public:
-    ASTBitwiseXorExpr() : ASTExpr(BitwiseXorExpr) {}
+    ASTBitwiseXorExpr() : ASTExpr() {}
   };
 
   class ASTBitwiseOrExpr : public ASTExpr {
     public:
-    ASTBitwiseOrExpr() : ASTExpr(BitwiseOrExpr) {}
+    ASTBitwiseOrExpr() : ASTExpr() {}
   };
 
   class ASTLogicalAndExpr : public ASTExpr {
     public:
-    ASTLogicalAndExpr() : ASTExpr(LogicalAndExpr) {}
+    ASTLogicalAndExpr() : ASTExpr() {}
   };
 
   class ASTLogicalOrExpr : public ASTExpr {
     public:
-    ASTLogicalOrExpr() : ASTExpr(LogicalOrExpr) {}
+    ASTLogicalOrExpr() : ASTExpr() {}
   };
 
   class ASTAssignExpr : public ASTExpr {
     public:
-    ASTAssignExpr() : ASTExpr(AssignExpr) {}
+    ASTAssignExpr() : ASTExpr() {}
   };
 
   class ASTExprStmt : public AST {
     public:
     std::shared_ptr<AST> expr;
-    ASTExprStmt() : AST(ExprStmt) {}
+    ASTExprStmt() : AST() {}
   };
 
   class ASTBreakStmt : public AST {
     public:
-    ASTBreakStmt() : AST(BreakStmt) {}
+    ASTBreakStmt() : AST() {}
   };
 
   class ASTContinueStmt : public AST {
     public:
-    ASTContinueStmt() : AST(ContinueStmt) {}
+    ASTContinueStmt() : AST() {}
   };
 
   class ASTReturnStmt : public AST {
     public:
     std::shared_ptr<AST> expr;
-    ASTReturnStmt() : AST(ReturnStmt) {}
+    ASTReturnStmt() : AST() {}
   };
 
   class ASTDeclarator : public AST {
     public:
     tokenizer::Token *op;
-    ASTDeclarator(tokenizer::Token *t) : AST(Declarator), op(t) {}
+    ASTDeclarator(tokenizer::Token *t) : AST(), op(t) {}
   };
 
   class ASTDeclaration : public AST {
     public:
     std::shared_ptr<ASTTypeSpec> declaration_spec;
     std::vector<std::shared_ptr<ASTDeclarator>> declarators;
-    ASTDeclaration() : AST(Declaration) {
+    ASTDeclaration() : AST() {
       declarators = std::vector<std::shared_ptr<ASTDeclarator>>();
     }
   };
@@ -189,13 +146,13 @@ namespace parser {
     public:
     std::shared_ptr<ASTTypeSpec> type_spec;
     std::shared_ptr<ASTDeclarator> declarator;
-    ASTSimpleDeclaration() : AST(SimpleDeclaration) {}
+    ASTSimpleDeclaration() : AST() {}
   };
 
   class ASTCompoundStmt : public AST {
     public:
     std::vector<std::shared_ptr<AST>> items;
-    ASTCompoundStmt() : AST(CompoundStmt) {
+    ASTCompoundStmt() : AST() {
       items = std::vector<std::shared_ptr<AST>>();
     }
   };
@@ -204,7 +161,7 @@ namespace parser {
     public:
     std::shared_ptr<ASTDeclarator> declarator;
     std::vector<std::shared_ptr<ASTSimpleDeclaration>> args;
-    ASTFuncDeclarator() : AST(FuncDeclarator) {
+    ASTFuncDeclarator() : AST() {
       args = std::vector<std::shared_ptr<ASTSimpleDeclaration>>();
     }
   };
@@ -213,21 +170,21 @@ namespace parser {
     public:
     std::shared_ptr<ASTTypeSpec> type_spec;
     std::shared_ptr<ASTFuncDeclarator> declarator;
-    ASTFuncDeclaration() : AST(FuncDeclaration) {}
+    ASTFuncDeclaration() : AST() {}
   };
 
   class ASTFuncDef : public AST {
     public:
     std::shared_ptr<ASTFuncDeclaration> declaration;
     std::shared_ptr<ASTCompoundStmt> body;
-    ASTFuncDef() : AST(FuncDef) {}
+    ASTFuncDef() : AST() {}
   };
 
   class ASTExternalDeclaration : public AST {
     public:
     std::shared_ptr<ASTTypeSpec> declaration_spec;
     std::vector<std::shared_ptr<ASTDeclarator>> declarators;
-    ASTExternalDeclaration() : AST(ExternalDeclaration) {
+    ASTExternalDeclaration() : AST() {
       declarators = std::vector<std::shared_ptr<ASTDeclarator>>();
     }
   };
@@ -235,10 +192,12 @@ namespace parser {
   class ASTTranslationUnit : public AST {
     public:
     std::vector<std::shared_ptr<AST>> external_declarations;
-    ASTTranslationUnit() : AST(TranslationUnit) {
+    ASTTranslationUnit() : AST() {
       external_declarations = std::vector<std::shared_ptr<AST>>();
     }
   };
+
+  bool is_unary_expr(std::shared_ptr<AST> node);
 
   // parser.cpp
   std::shared_ptr<ASTTranslationUnit> parse(tokenizer::Token **head, Error &err);
