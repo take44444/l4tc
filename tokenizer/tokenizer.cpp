@@ -89,69 +89,14 @@ namespace tokenizer {
 
   void print_tokens(Token *head) {
     for (Token *next = head; next != NULL; next = next->next) {
+      std::cerr << "code: ";
       if (next->sv.front() == ' ')
-        fprintf(stderr, "%ld spaces ", next->sv.length());
+        std::cerr << next->sv.length() << " spaces ";
       else if (next->sv == "\n")
-        fprintf(stderr, "code: LF ");
+        fprintf(stderr, "LF ");
       else
-        fprintf(stderr, "code: aaaaaaa ");
-        // fprintf(stderr, "code: %.*s ", next->length, next->begin);
-      switch (next->type)
-      {
-        case Delimiter:
-          fprintf(stderr, "type: Delimiter\n");
-          break;
-        case Punctuator:
-          fprintf(stderr, "type: Punctuator\n");
-          break;
-        case NumberConstant:
-          fprintf(stderr, "type: NumberConstant\n");
-          break;
-        case StringLiteral:
-          fprintf(stderr, "type: StringLiteral\n");
-          break;
-        case Ident:
-          fprintf(stderr, "type: Ident\n");
-          break;
-        case KwBreak:
-          fprintf(stderr, "type: KwBreak\n");
-          break;
-        case KwContinue:
-          fprintf(stderr, "type: KwContinue\n");
-          break;
-        case KwElif:
-          fprintf(stderr, "type: KwElif\n");
-          break;
-        case KwElse:
-          fprintf(stderr, "type: KwElse\n");
-          break;
-        case KwFunc:
-          fprintf(stderr, "type: KwFunc\n");
-          break;
-        case KwIf:
-          fprintf(stderr, "type: KwIf\n");
-          break;
-        case KwLoop:
-          fprintf(stderr, "type: KwLoop\n");
-          break;
-        case KwNum:
-          fprintf(stderr, "type: KwNum\n");
-          break;
-        case KwReturn:
-          fprintf(stderr, "type: KwReturn\n");
-          break;
-        case KwStr:
-          fprintf(stderr, "type: KwStr\n");
-          break;
-        case KwVoid:
-          fprintf(stderr, "type: KwVoid\n");
-          break;
-        case Unknown:
-          fprintf(stderr, "type: Unknown\n");
-          break;
-        default:
-          break;
-      }
+        std::cerr << next->sv;
+      std::cerr << "type: " << next->to_string();      
     }
   }
 

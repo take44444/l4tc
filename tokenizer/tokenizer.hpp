@@ -36,6 +36,47 @@ namespace tokenizer {
     Token *next;
     Token(int l, std::string_view s, enum TokenType tp)
     : line(l), sv(s), type(tp), next(NULL) {}
+    std::string to_string() {
+      switch (next->type)
+      {
+        case Delimiter:
+          return "Delimiter";
+        case Punctuator:
+          return "Punctuator";
+        case NumberConstant:
+          return "NumberConstant";
+        case StringLiteral:
+          return "StringLiteral";
+        case Ident:
+          return "Ident";
+        case KwBreak:
+          return "KwBreak";
+        case KwContinue:
+          return "KwContinue";
+        case KwElif:
+          return "KwElif";
+        case KwElse:
+          return "KwElse";
+        case KwFunc:
+          return "KwFunc";
+        case KwIf:
+          return "KwIf";
+        case KwLoop:
+          return "KwLoop";
+        case KwNum:
+          return "KwNum";
+        case KwReturn:
+          return "KwReturn";
+        case KwStr:
+          return "KwStr";
+        case KwVoid:
+          return "KwVoid";
+        case Unknown:
+          return "Unknown";
+        default:
+          return "????";
+      }
+    }
   };
 
   // tokenizer.cpp
