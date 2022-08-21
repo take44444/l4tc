@@ -1,7 +1,7 @@
 CC=g++
 CFLAGS=-Wall -Wpedantic -Wextra -Werror -std=c++17
-SRCS=lupc.cpp tokenizer.cpp parser.cpp utils.cpp
-HEADERS=lupc.h
+SRCS=lupc.cpp tokenizer/tokenizer.cpp parser/parser.cpp parser/utils.cpp
+HEADERS=lupc.hpp tokenizer/tokenizer.hpp parser/parser.hpp
 
 .FORCE :
 

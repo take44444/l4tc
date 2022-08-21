@@ -1,17 +1,18 @@
-#include "lupc.h"
+#include "bits/stdc++.h"
+#include "lupc.hpp"
 
 int main() {
-  ostringstream ost;
-  ost << cin.rdbuf();
-  string source = ost.str();
-  Token *token_list = tokenize(source);
-  Error error = Error("");
-  shared_ptr<AST> ast = parse(&token_list, error);
+  std::ostringstream ost;
+  ost << std::cin.rdbuf();
+  std::string source = ost.str();
+  tokenizer::Token *token_list = tokenizer::tokenize(source);
+  parser::Error error = parser::Error("");
+  std::shared_ptr<parser::AST> ast = parser::parse(&token_list, error);
   if (!ast) {
     print_tokens(token_list);
-    printf("%s\n", &error.err_str[0]);
+    printf("%s\n", &error.str[0]);
   } else {
-    print_ast(ast);
+    parser::print_ast(ast);
   }
   // preprocess(token_list);
   // AST *ast = parse(token_list);
