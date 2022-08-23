@@ -14,8 +14,7 @@ int main() {
   } else {
     parser::print_ast(ast);
   }
-  // preprocess(token_list);
-  // AST *ast = parse(token_list);
-  // SymbolEntry *ctx = analyze(ast);
-  // string assembly = generate(ast, ctx);
+  // analyzer::Error error = analyzer::Error(NULL);
+  // analyzer::SymbolEntry *ctx = analyzer::analyze(ast, error);
+  // std::string assembly = generator::generate(ast, ctx);
 }
