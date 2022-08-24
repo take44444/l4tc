@@ -2,6 +2,7 @@
 #define PARSER_HPP
 #include "bits/stdc++.h"
 #include "../tokenizer/tokenizer.hpp"
+#include "../generator/generator.hpp"
 
 namespace parser {
   class Error {
@@ -38,6 +39,7 @@ namespace parser {
   class ASTExpr : public AST {
     public:
     std::shared_ptr<ASTExpr> left, right;
+    generator::EvalType eval_type;
     ASTExpr() : AST() {}
   };
 
