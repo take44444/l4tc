@@ -24,6 +24,21 @@ namespace generator {
     TypePointer(std::shared_ptr<EvalType> of) : EvalType(), pointer_of(of) {}
   };
 
+  class LoopInfo {
+    public:
+    std::string label_break;
+    std::string label_continue;
+    LoopInfo(int i) {
+      if (i < 0) {
+        label_break = "";
+        label_continue = "";
+        return;
+      }
+      label_break = std::to_string(i) + "B";
+      label_continue = std::to_string(i) + "C";
+    }
+  };
+
   class SymbolEntrys {
     public:
     SymbolEntrys() {}
@@ -32,6 +47,9 @@ namespace generator {
     void add_local_var(std::string key, std::shared_ptr<EvalType> type) {}
     void start_scope() {}
     void end_scope() {}
+    LoopInfo get_loop_info() {
+      return LoopInfo(-1);
+    }
   };
 }
 #endif

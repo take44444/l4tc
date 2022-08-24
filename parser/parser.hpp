@@ -66,27 +66,32 @@ namespace parser {
 
   class ASTMultiplicativeExpr : public ASTExpr {
     public:
-    ASTMultiplicativeExpr() : ASTExpr() {}
+    tokenizer::Token *op;
+    ASTMultiplicativeExpr(tokenizer::Token *t) : ASTExpr(), op(t) {}
   };
 
   class ASTAdditiveExpr : public ASTExpr {
     public:
-    ASTAdditiveExpr() : ASTExpr() {}
+    tokenizer::Token *op;
+    ASTAdditiveExpr(tokenizer::Token *t) : ASTExpr(), op(t) {}
   };
 
   class ASTShiftExpr : public ASTExpr {
     public:
-    ASTShiftExpr() : ASTExpr() {}
+    tokenizer::Token *op;
+    ASTShiftExpr(tokenizer::Token *t) : ASTExpr(), op(t) {}
   };
 
   class ASTRelationalExpr : public ASTExpr {
     public:
-    ASTRelationalExpr() : ASTExpr() {}
+    tokenizer::Token *op;
+    ASTRelationalExpr(tokenizer::Token *t) : ASTExpr(), op(t) {}
   };
 
   class ASTEqualityExpr : public ASTExpr {
     public:
-    ASTEqualityExpr() : ASTExpr() {}
+    tokenizer::Token *op;
+    ASTEqualityExpr(tokenizer::Token *t) : ASTExpr(), op(t) {}
   };
 
   class ASTBitwiseAndExpr : public ASTExpr {

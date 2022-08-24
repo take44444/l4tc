@@ -23,6 +23,14 @@ namespace generator {
   }
 
   void generator_sub(std::shared_ptr<parser::AST> ast, std::shared_ptr<SymbolEntrys> se, std::string &code) {
+    if (typeid(*ast) == typeid(parser::ASTTranslationUnit)) {
+      std::shared_ptr<parser::ASTTranslationUnit> n = std::dynamic_pointer_cast<parser::ASTTranslationUnit>(ast);
+      code += ".intel_syntax noprefix\n"; // use intel syntax
+      code += ".text\n";
+      for (std::shared_ptr<parser::AST> d: n->external_declarations) {
+        generator_sub(d, se, code);
+      }
+    }
     // declaration-spec simple-declarators
     if (typeid(*ast) == typeid(parser::ASTExternalDeclaration)) {
       std::shared_ptr<parser::ASTExternalDeclaration> n = std::dynamic_pointer_cast<parser::ASTExternalDeclaration>(ast);
@@ -79,8 +87,37 @@ namespace generator {
       code += "pop rbp\n";
       code += "ret\n";
     }
+    if (typeid(*ast) == typeid(parser::ASTBreakStmt)) {
+      std::string label = se->get_loop_info().label_break;
+      if (!label.length()) {
+        // TODO error
+      }
+      code += "jmp L" + label;
+      return;
+    }
+    if (typeid(*ast) == typeid(parser::ASTContinueStmt)) {
+      std::string label = se->get_loop_info().label_continue;
+      if (!label.length()) {
+        // TODO error
+      }
+      code += "jmp L" + label;
+      return;
+    }
+    if (typeid(*ast) == typeid(parser::ASTAssignExpr)) {}
+    if (typeid(*ast) == typeid(parser::ASTLogicalOrExpr)) {}
+    if (typeid(*ast) == typeid(parser::ASTLogicalAndExpr)) {}
+    if (typeid(*ast) == typeid(parser::ASTBitwiseOrExpr)) {}
+    if (typeid(*ast) == typeid(parser::ASTBitwiseXorExpr)) {}
+    if (typeid(*ast) == typeid(parser::ASTBitwiseAndExpr)) {}
+    if (typeid(*ast) == typeid(parser::ASTEqualityExpr)) {}
+    if (typeid(*ast) == typeid(parser::ASTRelationalExpr)) {}
+    if (typeid(*ast) == typeid(parser::ASTShiftExpr)) {}
+    if (typeid(*ast) == typeid(parser::ASTAdditiveExpr)) {}
+    if (typeid(*ast) == typeid(parser::ASTMultiplicativeExpr)) {}
+    if (typeid(*ast) == typeid(parser::ASTFuncCallExpr)) {}
+    if (typeid(*ast) == typeid(parser::ASTPrimaryExpr)) {}
+    if (typeid(*ast) == typeid(parser::ASTSimpleExpr)) {}
   }
-
 
   std::string generator(std::shared_ptr<parser::AST> ast) {
     std::string ret;
