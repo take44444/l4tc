@@ -5,11 +5,12 @@
 #include "../generator/generator.hpp"
 
 namespace parser {
+  using namespace tokenizer;
   class Error {
     public:
-    tokenizer::Token *token;
+    Token *token;
     std::string message;
-    explicit Error(std::string expected, std::string found, tokenizer::Token *t) : token(t) {
+    explicit Error(std::string expected, std::string found, Token *t) : token(t) {
       message = "error: expected " + expected + ", found " + found;
     }
     std::string get_error_string() {
@@ -32,8 +33,8 @@ namespace parser {
 
   class ASTTypeSpec : public AST {
     public:
-    tokenizer::Token *op;
-    ASTTypeSpec(tokenizer::Token *t) : AST(), op(t) {}
+    Token *op;
+    ASTTypeSpec(Token *t) : AST(), op(t) {}
   };
 
   class ASTExpr : public AST {
@@ -45,8 +46,8 @@ namespace parser {
 
   class ASTSimpleExpr : public ASTExpr {
     public:
-    tokenizer::Token *op;
-    ASTSimpleExpr(tokenizer::Token *t) : ASTExpr(), op(t) {}
+    Token *op;
+    ASTSimpleExpr(Token *t) : ASTExpr(), op(t) {}
   };
 
   class ASTPrimaryExpr : public ASTExpr {
@@ -66,32 +67,32 @@ namespace parser {
 
   class ASTMultiplicativeExpr : public ASTExpr {
     public:
-    tokenizer::Token *op;
-    ASTMultiplicativeExpr(tokenizer::Token *t) : ASTExpr(), op(t) {}
+    Token *op;
+    ASTMultiplicativeExpr(Token *t) : ASTExpr(), op(t) {}
   };
 
   class ASTAdditiveExpr : public ASTExpr {
     public:
-    tokenizer::Token *op;
-    ASTAdditiveExpr(tokenizer::Token *t) : ASTExpr(), op(t) {}
+    Token *op;
+    ASTAdditiveExpr(Token *t) : ASTExpr(), op(t) {}
   };
 
   class ASTShiftExpr : public ASTExpr {
     public:
-    tokenizer::Token *op;
-    ASTShiftExpr(tokenizer::Token *t) : ASTExpr(), op(t) {}
+    Token *op;
+    ASTShiftExpr(Token *t) : ASTExpr(), op(t) {}
   };
 
   class ASTRelationalExpr : public ASTExpr {
     public:
-    tokenizer::Token *op;
-    ASTRelationalExpr(tokenizer::Token *t) : ASTExpr(), op(t) {}
+    Token *op;
+    ASTRelationalExpr(Token *t) : ASTExpr(), op(t) {}
   };
 
   class ASTEqualityExpr : public ASTExpr {
     public:
-    tokenizer::Token *op;
-    ASTEqualityExpr(tokenizer::Token *t) : ASTExpr(), op(t) {}
+    Token *op;
+    ASTEqualityExpr(Token *t) : ASTExpr(), op(t) {}
   };
 
   class ASTBitwiseAndExpr : public ASTExpr {
@@ -148,8 +149,8 @@ namespace parser {
 
   class ASTDeclarator : public AST {
     public:
-    tokenizer::Token *op;
-    ASTDeclarator(tokenizer::Token *t) : AST(), op(t) {}
+    Token *op;
+    ASTDeclarator(Token *t) : AST(), op(t) {}
   };
 
   class ASTDeclaration : public AST {
@@ -219,15 +220,15 @@ namespace parser {
   bool is_unary_expr(std::shared_ptr<AST> node);
 
   // parser.cpp
-  std::shared_ptr<ASTTranslationUnit> parse(tokenizer::Token **head, Error &err);
+  std::shared_ptr<ASTTranslationUnit> parse(Token **head, Error &err);
   void print_ast(std::shared_ptr<AST> n);
 
   // utils.cpp
-  tokenizer::Token *expect_token_with_str(tokenizer::Token **next, Error &err, std::string str);
-  tokenizer::Token *consume_token_with_str(tokenizer::Token **next, std::string str);
-  tokenizer::Token *expect_token_with_type(tokenizer::Token **next, Error &err, tokenizer::TokenType type);
-  tokenizer::Token *consume_token_with_type(tokenizer::Token **next, tokenizer::TokenType type);
-  tokenizer::Token *consume_token_with_indents(tokenizer::Token **next, int indents);
-  tokenizer::Token *expect_token_with_indents(tokenizer::Token **next, Error &err, int indents);
+  Token *expect_token_with_str(Token **next, Error &err, std::string str);
+  Token *consume_token_with_str(Token **next, std::string str);
+  Token *expect_token_with_type(Token **next, Error &err, TokenType type);
+  Token *consume_token_with_type(Token **next, TokenType type);
+  Token *consume_token_with_indents(Token **next, int indents);
+  Token *expect_token_with_indents(Token **next, Error &err, int indents);
 }
 #endif
