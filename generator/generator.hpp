@@ -43,20 +43,23 @@ namespace generator {
     }
   };
 
-  class SymbolEntrys {
+  class Context {
     public:
     int rsp;
-    SymbolEntrys() : rsp(0) {}
+    Context() : rsp(0) {}
     void add_global_var(std::string key, std::shared_ptr<EvalType> type) {}
     void add_func(std::string key, std::shared_ptr<EvalType> type, std::vector<std::shared_ptr<EvalType>> &type_args) {}
-    void add_local_var(std::string key, std::shared_ptr<EvalType> type) {}
-    void start_scope() {}
-    void end_scope() {}
+    void add_local_var(std::string key, std::shared_ptr<EvalType> type) {
+      local_var.rbp_minus = -rsp;
+    }
+    void start_scope() {
+      // store rsp
+    }
+    void end_scope() {
+      // check rsp is stored value
+    }
     LoopInfo get_loop_info() {
       return LoopInfo(-1);
-    }
-    void add2rsp(int o) {
-      rsp += o;
     }
     bool is_rsp_aligned() {
       return !(rsp & 0xF);
