@@ -13,8 +13,8 @@ namespace generator {
     {
     case KwNum:
       return std::make_shared<TypeNum>();
-    case KwVoid:
-      return std::make_shared<TypeVoid>();
+    // case KwVoid:
+    //   return std::make_shared<TypeVoid>();
     default:
       break;
     }
@@ -65,19 +65,19 @@ namespace generator {
       assert(ctx->rsp == 0); // here is global
       ctx->start_scope(); // remember rsp value
       code += "push rbp\n";
-      code += "mov rbp rsp\n";
+      code += "mov rbp, rsp\n";
       ctx->rsp = 0; // rsp == rbp
       if (type_args.size() > 6) {
         // TODO: the maximum number of arguments of function is 6
       }
       // sub number of params * 8 from rsp
-      code += "sub rsp " + std::to_string((int)type_args.size() * 8) + "\n";
+      code += "sub rsp, " + std::to_string((int)type_args.size() * 8) + "\n";
       for (int i=0; i < (int)type_args.size(); i++) {
         // all size of vars are 8 byte (64bit) in this lupc
         ctx->rsp -= 8;
         // add vars in function arguments to local vars
         ctx->add_local_var(name_args[i], type_args[i]);
-        code += "mov [rbp - " + std::to_string(-ctx->rsp) + "] " + param_reg_names[i] + "\n";
+        code += "mov [rbp - " + std::to_string(-ctx->rsp) + "], " + param_reg_names[i] + "\n";
       }
       generator_sub(n->body, ctx, code);
       // pop arguments from stack
@@ -92,7 +92,7 @@ namespace generator {
       std::shared_ptr<ASTDeclaration> n = std::dynamic_pointer_cast<ASTDeclaration>(ast);
       std::shared_ptr<EvalType> base_type = create_base_type(n->declaration_spec);
       // sub number of declarators * 8 from rsp
-      code += "sub rsp " + std::to_string((int)n->declarators.size() * 8) + "\n";
+      code += "sub rsp, " + std::to_string((int)n->declarators.size() * 8) + "\n";
       for (std::shared_ptr<ASTDeclarator> d: n->declarators) {
         // all size of vars are 8 byte (64bit) in this lupc
         ctx->rsp -= 8;
@@ -115,7 +115,7 @@ namespace generator {
         if (typeid(*stmt) == typeid(ASTCompoundStmt)) ctx->end_scope();
       }
       assert(ctx->rsp == saved_rsp2);
-      code += "add rsp " + std::to_string(saved_rsp1 - saved_rsp2) + "\n";
+      code += "add rsp, " + std::to_string(saved_rsp1 - saved_rsp2) + "\n";
       ctx->rsp += saved_rsp1 - saved_rsp2;
       return;
     }
@@ -131,27 +131,27 @@ namespace generator {
       generator_sub(n->expr, ctx, code);
       ctx->rsp += 8;
       code += "pop rax\n"; // set return value
-      code += "add rsp " + std::to_string(ctx->func_saved_rsp() - ctx->rsp) + "\n";
+      code += "add rsp, " + std::to_string(ctx->func_saved_rsp() - ctx->rsp) + "\n";
       code += "mov rsp, rbp\n";
       code += "pop rbp\n";
       code += "ret\n";
     }
-    if (typeid(*ast) == typeid(ASTBreakStmt)) {
-      std::string label = ctx->get_loop_info().label_break;
-      if (!label.length()) {
-        // TODO error
-      }
-      code += "jmp L" + label;
-      return;
-    }
-    if (typeid(*ast) == typeid(ASTContinueStmt)) {
-      std::string label = ctx->get_loop_info().label_continue;
-      if (!label.length()) {
-        // TODO error
-      }
-      code += "jmp L" + label;
-      return;
-    }
+    // if (typeid(*ast) == typeid(ASTBreakStmt)) {
+    //   std::string label = ctx->get_loop_info().label_break;
+    //   if (!label.length()) {
+    //     // TODO error
+    //   }
+    //   code += "jmp L" + label;
+    //   return;
+    // }
+    // if (typeid(*ast) == typeid(ASTContinueStmt)) {
+    //   std::string label = ctx->get_loop_info().label_continue;
+    //   if (!label.length()) {
+    //     // TODO error
+    //   }
+    //   code += "jmp L" + label;
+    //   return;
+    // }
     if (typeid(*ast) == typeid(ASTAssignExpr)) {
       std::shared_ptr<ASTAssignExpr> n = std::dynamic_pointer_cast<ASTAssignExpr>(ast);
       generator_sub(n->right, ctx, code);
@@ -165,8 +165,8 @@ namespace generator {
       code += "pop r11\n";
       code += "pop r10\n";
       if (n->right->is_assignable) code += "mov r11 [r11]\n";
-      code += "mov [r10] r11\n";
-      code += "mov r11 [r10]\n";
+      code += "mov [r10], r11\n";
+      code += "mov r11, [r10]\n";
       code += "push r11\n";
       ctx->rsp += 8;
       n->eval_type = n->left->eval_type;
@@ -194,7 +194,7 @@ namespace generator {
       code += "pop r10\n";
       if (n->left->is_assignable) code += "mov r10 [r10]\n";
       if (n->right->is_assignable) code += "mov r11 [r11]\n";
-      code += "add r10 r11\n";
+      code += "add r10, r11\n";
       code += "push r10\n";
       ctx->rsp += 8;
       n->eval_type = n->left->eval_type;
@@ -214,13 +214,17 @@ namespace generator {
       code += "pop r10\n";
       if (n->left->is_assignable) code += "mov r10 [r10]\n";
       if (n->right->is_assignable) code += "mov r11 [r11]\n";
-      code += "imul r10 r11\n";
+      code += "imul r10, r11\n";
       code += "push r10\n";
       ctx->rsp += 8;
       n->eval_type = n->left->eval_type;
       n->is_assignable = false;
     }
-    if (typeid(*ast) == typeid(ASTFuncCallExpr)) {}
+    if (typeid(*ast) == typeid(ASTFuncCallExpr)) {
+      std::shared_ptr<ASTFuncCallExpr> n = std::dynamic_pointer_cast<ASTFuncCallExpr>(ast);
+      generator_sub(n->primary, ctx, code);
+      // ctx->get_func(n->primary->)
+    }
     if (typeid(*ast) == typeid(ASTPrimaryExpr)) {
       std::shared_ptr<ASTPrimaryExpr> n = std::dynamic_pointer_cast<ASTPrimaryExpr>(ast);
       generator_sub(n->expr, ctx, code);
@@ -233,13 +237,13 @@ namespace generator {
         LocalVarInfo lvi = ctx->get_local_var_info(n->op->sv);
         n->eval_type = lvi.type;
         n->is_assignable = true;
-        code += "lea r10 [rbp - " + std::to_string(lvi.offset) + "]\n";
+        code += "lea r10, [rbp - " + std::to_string(lvi.offset) + "]\n";
         code += "push r10\n";
         ctx->rsp -= 8;
       } else if (n->op->type == NumberConstant) {
         n->eval_type = std::make_shared<TypeNum>();
         n->is_assignable = false;
-        code += "mov r10 " + std::string(n->op->sv) + "\n";
+        code += "mov r10, " + std::string(n->op->sv) + "\n";
         code += "push r10\n";
         ctx->rsp -= 8;
       }
