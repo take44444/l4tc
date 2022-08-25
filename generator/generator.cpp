@@ -122,14 +122,16 @@ namespace generator {
     if (typeid(*ast) == typeid(ASTExprStmt)) {
       std::shared_ptr<ASTExprStmt> n = std::dynamic_pointer_cast<ASTExprStmt>(ast);
       generator_sub(n->expr, ctx, code);
-      code += "pop r11\n"; // pop the value that need not be evaluate
+      ctx->rsp += 8;
+      code += "pop r10\n"; // pop the value that need not be evaluate
       return;
     }
     if (typeid(*ast) == typeid(ASTReturnStmt)) {
       std::shared_ptr<ASTReturnStmt> n = std::dynamic_pointer_cast<ASTReturnStmt>(ast);
       generator_sub(n->expr, ctx, code);
+      ctx->rsp += 8;
       code += "pop rax\n"; // set return value
-      code += "add rsp " + std::to_string(se->func_saved_rsp() - se->rsp) + "\n";
+      code += "add rsp " + std::to_string(ctx->func_saved_rsp() - ctx->rsp) + "\n";
       code += "mov rsp, rbp\n";
       code += "pop rbp\n";
       code += "ret\n";
@@ -150,20 +152,99 @@ namespace generator {
       code += "jmp L" + label;
       return;
     }
-    if (typeid(*ast) == typeid(ASTAssignExpr)) {}
-    if (typeid(*ast) == typeid(ASTLogicalOrExpr)) {}
-    if (typeid(*ast) == typeid(ASTLogicalAndExpr)) {}
-    if (typeid(*ast) == typeid(ASTBitwiseOrExpr)) {}
-    if (typeid(*ast) == typeid(ASTBitwiseXorExpr)) {}
-    if (typeid(*ast) == typeid(ASTBitwiseAndExpr)) {}
-    if (typeid(*ast) == typeid(ASTEqualityExpr)) {}
-    if (typeid(*ast) == typeid(ASTRelationalExpr)) {}
-    if (typeid(*ast) == typeid(ASTShiftExpr)) {}
-    if (typeid(*ast) == typeid(ASTAdditiveExpr)) {}
-    if (typeid(*ast) == typeid(ASTMultiplicativeExpr)) {}
+    if (typeid(*ast) == typeid(ASTAssignExpr)) {
+      std::shared_ptr<ASTAssignExpr> n = std::dynamic_pointer_cast<ASTAssignExpr>(ast);
+      generator_sub(n->right, ctx, code);
+      generator_sub(n->left, ctx, code);
+      if (!n->left->is_assignable) {
+        // TODO error
+      }
+      if (typeid(n->left->eval_type) != typeid(n->right->eval_type)) {
+        // TODO error
+      }
+      code += "pop r11\n";
+      code += "pop r10\n";
+      if (n->right->is_assignable) code += "mov r11 [r11]\n";
+      code += "mov [r10] r11\n";
+      code += "mov r11 [r10]\n";
+      code += "push r11\n";
+      ctx->rsp += 8;
+      n->eval_type = n->left->eval_type;
+      n->is_assignable = false;
+    }
+    // if (typeid(*ast) == typeid(ASTLogicalOrExpr)) {}
+    // if (typeid(*ast) == typeid(ASTLogicalAndExpr)) {}
+    // if (typeid(*ast) == typeid(ASTBitwiseOrExpr)) {}
+    // if (typeid(*ast) == typeid(ASTBitwiseXorExpr)) {}
+    // if (typeid(*ast) == typeid(ASTBitwiseAndExpr)) {}
+    // if (typeid(*ast) == typeid(ASTEqualityExpr)) {}
+    // if (typeid(*ast) == typeid(ASTRelationalExpr)) {}
+    // if (typeid(*ast) == typeid(ASTShiftExpr)) {}
+    if (typeid(*ast) == typeid(ASTAdditiveExpr)) {
+      std::shared_ptr<ASTAdditiveExpr> n = std::dynamic_pointer_cast<ASTAdditiveExpr>(ast);
+      generator_sub(n->left, ctx, code);
+      generator_sub(n->right, ctx, code);
+      if (typeid(n->left->eval_type) != typeid(TypeNum)) {
+        // TODO error
+      }
+      if (typeid(n->right->eval_type) != typeid(TypeNum)) {
+        // TODO error
+      }
+      code += "pop r11\n";
+      code += "pop r10\n";
+      if (n->left->is_assignable) code += "mov r10 [r10]\n";
+      if (n->right->is_assignable) code += "mov r11 [r11]\n";
+      code += "add r10 r11\n";
+      code += "push r10\n";
+      ctx->rsp += 8;
+      n->eval_type = n->left->eval_type;
+      n->is_assignable = false;
+    }
+    if (typeid(*ast) == typeid(ASTMultiplicativeExpr)) {
+      std::shared_ptr<ASTMultiplicativeExpr> n = std::dynamic_pointer_cast<ASTMultiplicativeExpr>(ast);
+      generator_sub(n->left, ctx, code);
+      generator_sub(n->right, ctx, code);
+      if (typeid(n->left->eval_type) != typeid(TypeNum)) {
+        // TODO error
+      }
+      if (typeid(n->right->eval_type) != typeid(TypeNum)) {
+        // TODO error
+      }
+      code += "pop r11\n";
+      code += "pop r10\n";
+      if (n->left->is_assignable) code += "mov r10 [r10]\n";
+      if (n->right->is_assignable) code += "mov r11 [r11]\n";
+      code += "imul r10 r11\n";
+      code += "push r10\n";
+      ctx->rsp += 8;
+      n->eval_type = n->left->eval_type;
+      n->is_assignable = false;
+    }
     if (typeid(*ast) == typeid(ASTFuncCallExpr)) {}
-    if (typeid(*ast) == typeid(ASTPrimaryExpr)) {}
-    if (typeid(*ast) == typeid(ASTSimpleExpr)) {}
+    if (typeid(*ast) == typeid(ASTPrimaryExpr)) {
+      std::shared_ptr<ASTPrimaryExpr> n = std::dynamic_pointer_cast<ASTPrimaryExpr>(ast);
+      generator_sub(n->expr, ctx, code);
+      n->eval_type = n->expr->eval_type;
+      n->is_assignable = n->expr->is_assignable;
+    }
+    if (typeid(*ast) == typeid(ASTSimpleExpr)) {
+      std::shared_ptr<ASTSimpleExpr> n = std::dynamic_pointer_cast<ASTSimpleExpr>(ast);
+      if (n->op->type == Ident) {
+        LocalVarInfo lvi = ctx->get_local_var_info(n->op->sv);
+        n->eval_type = lvi.type;
+        n->is_assignable = true;
+        code += "lea r10 [rbp - " + std::to_string(lvi.offset) + "]\n";
+        code += "push r10\n";
+        ctx->rsp -= 8;
+      } else if (n->op->type == NumberConstant) {
+        n->eval_type = std::make_shared<TypeNum>();
+        n->is_assignable = false;
+        code += "mov r10 " + std::string(n->op->sv) + "\n";
+        code += "push r10\n";
+        ctx->rsp -= 8;
+      }
+      return;
+    }
   }
 
   std::string generator(std::shared_ptr<AST> ast) {

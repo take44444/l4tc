@@ -40,8 +40,9 @@ namespace parser {
   class ASTExpr : public AST {
     public:
     std::shared_ptr<ASTExpr> left, right;
-    generator::EvalType eval_type;
-    ASTExpr() : AST() {}
+    std::shared_ptr<generator::EvalType> eval_type;
+    bool is_assignable;
+    ASTExpr() : AST(), is_assignable(false) {}
   };
 
   class ASTSimpleExpr : public ASTExpr {
