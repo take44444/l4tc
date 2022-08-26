@@ -3,6 +3,26 @@
 namespace generator {
   const std::string param_reg_names[6] = {"rdi", "rsi", "rdx", "rcx", "r8",  "r9"};
 
+  std::shared_ptr<EvalType> create_base_type(std::shared_ptr<ASTTypeSpec> n) {
+    // TODO static, const
+    switch (n->op->type)
+    {
+    case KwNum:
+      return std::make_shared<TypeNum>();
+    // case KwVoid:
+    //   return std::make_shared<TypeVoid>();
+    default:
+      break;
+    }
+    assert(false);
+    return nullptr;
+  }
+
+  std::shared_ptr<EvalType> create_type(std::shared_ptr<ASTDeclarator>, std::shared_ptr<EvalType> base_type) {
+    // TODO: pointer
+    return base_type;
+  }
+
   std::shared_ptr<TypeFunc> create_func_type(std::shared_ptr<ASTFuncDeclaration> fd) {
     std::vector<std::shared_ptr<EvalType>> type_args;
     for (std::shared_ptr<ASTSimpleDeclaration> d: fd->declarator->args) {
@@ -17,26 +37,6 @@ namespace generator {
         create_base_type(fd->type_spec)
       )
     );
-  }
-
-  std::shared_ptr<EvalType> create_type(std::shared_ptr<ASTDeclarator> d, std::shared_ptr<EvalType> base_type) {
-    // TODO: pointer
-    return base_type;
-  }
-
-  std::shared_ptr<EvalType> create_base_type(std::shared_ptr<ASTTypeSpec> n) {
-    // TODO static, const
-    switch (n->op->type)
-    {
-    case KwNum:
-      return std::make_shared<TypeNum>();
-    // case KwVoid:
-    //   return std::make_shared<TypeVoid>();
-    default:
-      break;
-    }
-    assert(false);
-    return nullptr;
   }
 
   void generate_sub(std::shared_ptr<AST> ast, std::shared_ptr<Context> ctx, std::string &code) {

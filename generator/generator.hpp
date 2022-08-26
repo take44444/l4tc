@@ -10,6 +10,7 @@ namespace generator {
   class EvalType {
     public:
     EvalType() {}
+    virtual ~EvalType() = default;
   };
 
   class TypeNum : public EvalType {
@@ -71,19 +72,25 @@ namespace generator {
     int saved_rsp;
     std::vector<std::map<std::string, std::shared_ptr<LocalVar>>> scopes_local_vars;
     std::map<std::string, std::shared_ptr<GlobalVar>> global_vars;
+
     Context() : rsp(0), saved_rsp(0) {}
+
     void add_global_var(std::string key, std::shared_ptr<EvalType> type) {
-      global_vars.at(key) = std::make_shared<GlobalVar>(key, type);
+      global_vars.insert({key, std::make_shared<GlobalVar>(key, type)});
     }
+
     void add_local_var(std::string key, std::shared_ptr<EvalType> type) {
-      std::shared_ptr<LocalVar> lv = std::make_shared<LocalVar>(-rsp, type);
-      // TODO insert lv
+      scopes_local_vars.back().insert(
+        {key, std::make_shared<LocalVar>(-rsp, type)}
+      );
     }
+
     std::shared_ptr<GlobalVar> get_global_var(std::string_view key) {
       auto it = global_vars.find(std::string(key));
       if (it == global_vars.end()) return nullptr;
       return it->second;
     }
+
     std::shared_ptr<LocalVar> get_local_var(std::string_view key) {
       for (int i=(int)scopes_local_vars.size()-1; i >= 0; i--) {
         auto it = scopes_local_vars[i].find(std::string(key));
@@ -92,12 +99,14 @@ namespace generator {
       }
       return nullptr;
     }
+
     void start_scope() {
       saved_rsp = rsp;
       scopes_local_vars.push_back(
         std::map<std::string, std::shared_ptr<LocalVar>>()
       );
     }
+
     void end_scope() {
       assert(saved_rsp == rsp);
       scopes_local_vars.pop_back();
@@ -106,9 +115,11 @@ namespace generator {
     // LoopInfo get_loop() {
     //   return LoopInfo(-1);
     // }
+
     bool is_rsp_aligned() {
       return !(rsp & 0xF);
     }
   };
+  std::string generate(std::shared_ptr<AST> ast);
 }
 #endif

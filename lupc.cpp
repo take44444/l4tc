@@ -14,7 +14,5 @@ int main() {
   } else {
     parser::print_ast(ast);
   }
-  // analyzer::Error error = analyzer::Error(NULL);
-  // analyzer::SymbolEntry *ctx = analyzer::analyze(ast, error);
-  // std::string assembly = generator::generate(ast, ctx);
+  std::cout << generator::generate(ast) << std::endl;
 }

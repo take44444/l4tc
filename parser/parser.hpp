@@ -2,10 +2,14 @@
 #define PARSER_HPP
 #include "bits/stdc++.h"
 #include "../tokenizer/tokenizer.hpp"
-#include "../generator/generator.hpp"
+
+namespace generator {
+  class EvalType;
+}
 
 namespace parser {
   using namespace tokenizer;
+  using namespace generator;
   class Error {
     public:
     Token *token;
@@ -40,7 +44,7 @@ namespace parser {
   class ASTExpr : public AST {
     public:
     std::shared_ptr<ASTExpr> left, right;
-    std::shared_ptr<generator::EvalType> eval_type;
+    std::shared_ptr<EvalType> eval_type;
     bool is_assignable;
     ASTExpr() : AST(), is_assignable(false) {}
   };
