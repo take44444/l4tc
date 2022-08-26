@@ -91,7 +91,7 @@ namespace generator {
       generate_sub(n->body, ctx, code);
       // pop arguments
       ctx->rsp += (int)name_args.size() * 8;
-      code += "add rsp " + std::to_string((int)name_args.size() * 8) + "\n";
+      code += "add rsp, " + std::to_string((int)name_args.size() * 8) + "\n";
       ctx->end_scope(); // check rsp
       code += "mov rsp, rbp\n";
       code += "pop rbp\n";
@@ -124,8 +124,8 @@ namespace generator {
         if (typeid(*stmt) == typeid(ASTCompoundStmt)) ctx->end_scope();
       }
       assert(ctx->rsp == saved_rsp);
-      ctx->rsp += ctx->saved_rsp - saved_rsp;
-      code += "add rsp, " + std::to_string(ctx->saved_rsp - saved_rsp) + "\n";
+      ctx->rsp += ctx->saved_rsp.back() - saved_rsp;
+      code += "add rsp, " + std::to_string(ctx->saved_rsp.back() - saved_rsp) + "\n";
       ctx->end_scope();
       return;
     }
@@ -138,9 +138,11 @@ namespace generator {
     }
     if (typeid(*ast) == typeid(ASTReturnStmt)) {
       std::shared_ptr<ASTReturnStmt> n = std::dynamic_pointer_cast<ASTReturnStmt>(ast);
-      generate_sub(n->expr, ctx, code);
+      std::shared_ptr<ASTExpr> expr = std::dynamic_pointer_cast<ASTExpr>(n->expr);
+      generate_sub(expr, ctx, code);
       ctx->rsp += 8;
       code += "pop rax\n"; // set return value
+      if (expr->is_assignable) code += "mov rax, [rax]\n";
       code += "mov rsp, rbp\n";
       code += "pop rbp\n";
       code += "ret\n";
@@ -179,11 +181,11 @@ namespace generator {
         // TODO error
         assert(false);
       }
-      code += "pop r11\n";
       code += "pop r10\n";
+      code += "pop r11\n";
       if (n->right->is_assignable) code += "mov r11 [r11]\n";
       code += "mov [r10], r11\n";
-      code += "mov r11, [r10]\n";
+      // code += "mov r11, [r10]\n";
       code += "push r11\n";
       ctx->rsp += 8; // 2 pop 1 push
       n->eval_type = n->left->eval_type;
@@ -211,8 +213,8 @@ namespace generator {
       }
       code += "pop r11\n";
       code += "pop r10\n";
-      if (n->left->is_assignable) code += "mov r10 [r10]\n";
-      if (n->right->is_assignable) code += "mov r11 [r11]\n";
+      if (n->left->is_assignable) code += "mov r10, [r10]\n";
+      if (n->right->is_assignable) code += "mov r11, [r11]\n";
       code += "add r10, r11\n";
       code += "push r10\n";
       ctx->rsp += 8; // 2 pop and 1 push
@@ -233,8 +235,8 @@ namespace generator {
       }
       code += "pop r11\n";
       code += "pop r10\n";
-      if (n->left->is_assignable) code += "mov r10 [r10]\n";
-      if (n->right->is_assignable) code += "mov r11 [r11]\n";
+      if (n->left->is_assignable) code += "mov r10, [r10]\n";
+      if (n->right->is_assignable) code += "mov r11, [r11]\n";
       code += "imul r10, r11\n";
       code += "push r10\n";
       ctx->rsp += 8; // 2 pop and 1 push
@@ -255,20 +257,23 @@ namespace generator {
       }
       for (int i=0; i < (int)n->args.size(); i++) {
         generate_sub(n->args[i], ctx, code);
-        if (typeid(*(n->args[i])) != typeid(*(tf->type_args[i]))) {
+        if (typeid(*(n->args[i]->eval_type)) != typeid(*(tf->type_args[i]))) {
           // TODO error
           assert(false);
         }
       }
       for (int i=(int)n->args.size()-1; i >= 0; i--) {
         code += "pop " + param_reg_names[i] + "\n";
+        if (n->args[i]->is_assignable) {
+          code += "mov " + param_reg_names[i] + ", [" + param_reg_names[i] +"]\n";
+        }
       }
       ctx->rsp += (int)n->args.size() * 8;
       code += "pop rax\n";
       // rsp needs to be aligned when call
-      if (!ctx->is_rsp_aligned()) code += "sub rsp 8\n";
+      if (!ctx->is_rsp_aligned()) code += "sub rsp, 8\n";
       code += "call rax\n";
-      if (!ctx->is_rsp_aligned()) code += "add rsp 8\n";
+      if (!ctx->is_rsp_aligned()) code += "add rsp, 8\n";
       code += "push rax\n";
       n->eval_type = tf->ret_type;
       n->is_assignable = false;
@@ -295,7 +300,7 @@ namespace generator {
         }
         std::shared_ptr<GlobalVar> gvi = ctx->get_global_var(n->op->sv);
         if (gvi) {
-          code += ".global" + gvi->name + "\n";
+          code += ".global " + gvi->name + "\n";
           code += "mov r10, [rip + " + gvi->name + "@GOTPCREL]\n";
           code += "push r10\n";
           ctx->rsp -= 8;

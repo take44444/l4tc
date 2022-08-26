@@ -1,3 +1,9 @@
 
-num g1, g2
+func add(num a, num b) -> num
+  return a + b
 
+func main() -> num
+  num x, y, z
+  x: y: 10
+  z: 5
+  return add(x, add(z, add(123, y)))

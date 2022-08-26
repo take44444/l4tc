@@ -69,11 +69,11 @@ namespace generator {
   class Context {
     public:
     int rsp;
-    int saved_rsp;
+    std::vector<int> saved_rsp;
     std::vector<std::map<std::string, std::shared_ptr<LocalVar>>> scopes_local_vars;
     std::map<std::string, std::shared_ptr<GlobalVar>> global_vars;
 
-    Context() : rsp(0), saved_rsp(0) {}
+    Context() : rsp(0), saved_rsp() {}
 
     void add_global_var(std::string key, std::shared_ptr<EvalType> type) {
       global_vars.insert({key, std::make_shared<GlobalVar>(key, type)});
@@ -101,14 +101,15 @@ namespace generator {
     }
 
     void start_scope() {
-      saved_rsp = rsp;
+      saved_rsp.push_back(rsp);
       scopes_local_vars.push_back(
         std::map<std::string, std::shared_ptr<LocalVar>>()
       );
     }
 
     void end_scope() {
-      assert(saved_rsp == rsp);
+      assert(saved_rsp.back() == rsp);
+      saved_rsp.pop_back();
       scopes_local_vars.pop_back();
     }
 

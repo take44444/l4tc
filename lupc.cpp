@@ -9,10 +9,9 @@ int main() {
   parser::Error error = parser::Error("", "", NULL);
   std::shared_ptr<parser::AST> ast = parser::parse(&token_list, error);
   if (!ast) {
-    // print_tokens(token_list);
     std::cerr << error.get_error_string() << std::endl;
-  } else {
     parser::print_ast(ast);
+  } else {
+    std::cout << generator::generate(ast) << std::endl;
   }
-  std::cout << generator::generate(ast) << std::endl;
 }
