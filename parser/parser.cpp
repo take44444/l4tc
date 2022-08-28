@@ -5,8 +5,7 @@ namespace parser {
     Token *t;
     if (
       (t = expect_token_with_type(next, err, KwNum)) ||
-      (t = expect_token_with_type(next, err, KwStr)) ||
-      (t = expect_token_with_type(next, err, KwVoid))
+      (t = expect_token_with_type(next, err, KwStr))
     ) {
       return std::make_shared<ASTTypeSpec>(t);
     }

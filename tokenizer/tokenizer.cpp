@@ -34,8 +34,6 @@ namespace tokenizer {
         return "KwReturn";
       case KwStr:
         return "KwStr";
-      case KwVoid:
-        return "KwVoid";
       case Unknown:
         return "Unknown";
       default:
@@ -74,8 +72,6 @@ namespace tokenizer {
         return "return-statement";
       case KwStr:
         return "type-specifier";
-      case KwVoid:
-        return "type-specifier";
       default:
         return "unknown";
     }
@@ -100,12 +96,12 @@ namespace tokenizer {
       else if (ret->sv == "elif") ret->type = KwElif;         // elif
       else if (ret->sv == "else") ret->type = KwElse;         // else
       else if (ret->sv == "func") ret->type = KwFunc;         // func
+      else if (ret->sv == "funcp") ret->type = KwFuncp;         // funcp
       else if (ret->sv == "if") ret->type = KwIf;             // if
       else if (ret->sv == "loop") ret->type = KwLoop;         // loop
       else if (ret->sv == "num") ret->type = KwNum;           // num
       else if (ret->sv == "return") ret->type = KwReturn;     // return
       else if (ret->sv == "str") ret->type = KwStr;           // str
-      else if (ret->sv == "void") ret->type = KwVoid;         // void
       return ret;
     }
     if ('!' == *p && p[1] == '=') {

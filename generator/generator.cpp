@@ -9,8 +9,6 @@ namespace generator {
     {
     case KwNum:
       return std::make_shared<TypeNum>();
-    // case KwVoid:
-    //   return std::make_shared<TypeVoid>();
     default:
       break;
     }

@@ -18,12 +18,12 @@ namespace tokenizer {
     KwElif,         // elif
     KwElse,         // else
     KwFunc,         // func
+    KwFuncp,         // funcp
     KwIf,           // if
     KwLoop,         // loop
     KwNum,          // num
     KwReturn,       // return
     KwStr,          // str
-    KwVoid,         // void
     // Unexpected Token
     Unknown,        // unknown
   };
