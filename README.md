@@ -1,13 +1,52 @@
 # Lup Compiler
 The compiler for Lup, which is the original programming language.
 
+## Example
+```
+num g1, g2: 200
+
+func add(num x, num y) -> num
+  return x + y
+
+func sub(num x, num y) -> num
+  return x - y
+
+func f(num x) -> funcp (num, num) -> num
+  if x = 0
+    return add
+  else
+    return sub
+
+func main() -> num
+  num a
+  num* p: &a
+  funcp (num) -> funcp (num, num) -> num fp: f
+  funcp* (num) -> funcp (num, num) -> num fpp: fp
+
+  a: 0
+  g1: 100
+
+  loop a < 2
+    printf("%d\n", ((*fpp)(*p))(g1, g2))
+    *p = *p + 1
+
+  return 0
+```
+
+The output will be
+```
+300
+-100
+```
+
 ## TODO
-- make analyzer
-- make generator
+- selection-statement
+- loop-statement
+- pointer
 
 ## Grammer
 ```
-code:
+translation-unit:
   external-declaration
   code external-declaration
 
@@ -24,9 +63,17 @@ declaration-specifier:
   storage-class-specifier type-specifier
 
 type-specifier:
-  num
-  str
-  void
+  num pointer-list_opt
+  str pointer-list_opt
+  funcp pointer-list_opt (type-specifier-list) -> type-specifier
+
+type-specifier-list:
+  type-specifier
+  type-specifier-list,type-specifier
+
+pointer-list:
+  *
+  pointer-list *
 
 type-qualifier:
   const
@@ -70,16 +117,16 @@ expr-list:
   expr-list,expr
 
 function-definition:
-  function-declaration LF compound-stmt
+  function-declaration compound-stmt
 
 function-declaration:
-  func identifier(single-declaration-list) -> type-specifier
+  func identifier(simple-declaration-list) -> type-specifier LF
 
-single-declaration-list:
-  single-declaration
-  single-declaration,single-declaration-list
+simple-declaration-list:
+  simple-declaration
+  simple-declaration,simple-declaration-list
 
-single-declaration:
+simple-declaration:
   type-specifier declarator
 
 compound-stmt:
