@@ -12,6 +12,7 @@ int main() {
     std::cerr << error.get_error_string() << std::endl;
     parser::print_ast(ast);
   } else {
+    // parser::print_ast(ast);
     std::cout << generator::generate(ast) << std::endl;
   }
 }

@@ -182,6 +182,22 @@ namespace parser {
     }
   };
 
+  class ASTElseStmt : public AST {
+    public:
+    std::shared_ptr<ASTExpr> cond;
+    std::shared_ptr<ASTCompoundStmt> true_stmt;
+    std::shared_ptr<ASTElseStmt> false_stmt;
+    ASTElseStmt() : AST(), cond(nullptr), false_stmt(nullptr) {}
+  };
+
+  class ASTIfStmt : public AST {
+    public:
+    std::shared_ptr<ASTExpr> cond;
+    std::shared_ptr<ASTCompoundStmt> true_stmt;
+    std::shared_ptr<ASTElseStmt> false_stmt;
+    ASTIfStmt() : AST(), cond(nullptr), false_stmt(nullptr) {}
+  };
+
   class ASTFuncDeclarator : public AST {
     public:
     std::shared_ptr<ASTDeclarator> declarator;

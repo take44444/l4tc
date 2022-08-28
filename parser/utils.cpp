@@ -260,6 +260,37 @@ namespace parser {
       std::cerr << ')';
       return;
     }
+    if (typeid(*n) == typeid(ASTIfStmt)) {
+      std::shared_ptr<ASTIfStmt> nn = std::dynamic_pointer_cast<ASTIfStmt>(n);
+      std::cerr << "IfStmt(cond=";
+      print_ast_sub(nn->cond, depth);
+      std::cerr << ", true-stmt=";
+      print_ast_sub(nn->true_stmt, depth);
+      if (nn->false_stmt) {
+        std::cerr <<", false-stmt=";
+        print_ast_sub(nn->false_stmt, depth);
+      }
+      std::cerr << ')';
+      return;
+    }
+    if (typeid(*n) == typeid(ASTElseStmt)) {
+      std::shared_ptr<ASTElseStmt> nn = std::dynamic_pointer_cast<ASTElseStmt>(n);
+      std::cerr << "ElseStmt(";
+      if (nn->cond) {
+        std::cerr << "cond=";
+        print_ast_sub(nn->cond, depth);
+      } else {
+        std::cerr << "cond=nil";
+      }
+      std::cerr << ", true-stmt=";
+      print_ast_sub(nn->true_stmt, depth);
+      if (nn->false_stmt) {
+        std::cerr <<", false-stmt=";
+        print_ast_sub(nn->false_stmt, depth);
+      }
+      std::cerr << ')';
+      return;
+    }
     if (typeid(*n) == typeid(ASTFuncDeclarator)) {
       std::shared_ptr<ASTFuncDeclarator> nn = std::dynamic_pointer_cast<ASTFuncDeclarator>(n);
       std::cerr << "FuncDeclarator(d=";

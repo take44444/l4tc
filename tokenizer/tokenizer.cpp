@@ -57,11 +57,11 @@ namespace tokenizer {
       case KwContinue:
         return "continue-statement";
       case KwElif:
-        return "elif-statement";
+        return "statement";
       case KwElse:
         return "else-statement";
       case KwFunc:
-        return "function-definition";
+        return "external-declaration";
       case KwIf:
         return "if-statement";
       case KwLoop:

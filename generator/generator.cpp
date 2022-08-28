@@ -1,6 +1,7 @@
 #include "./generator.hpp"
 
 namespace generator {
+  static int label_number = 0;
   const std::string param_reg_names[6] = {"rdi", "rsi", "rdx", "rcx", "r8",  "r9"};
 
   std::shared_ptr<EvalType> create_base_type(std::shared_ptr<ASTTypeSpec> n) {
@@ -108,6 +109,42 @@ namespace generator {
       }
       return;
     }
+    if (typeid(*ast) == typeid(ASTIfStmt)) {
+      std::shared_ptr<ASTIfStmt> n = std::dynamic_pointer_cast<ASTIfStmt>(ast);
+      int false_label = label_number++;
+      int end_label = label_number++;
+      generate_sub(n->cond, ctx, code);
+      ctx->rsp += 8;
+      code += "pop r10\n";
+      if (n->cond->is_assignable) code += "mov r10, [r10]\n";
+      code += "cmp r10, 0\n";
+      code += "setnz r10b\n";
+      code += "jz L" + std::to_string(false_label) + "\n";
+      generate_sub(n->true_stmt, ctx, code);
+      code += "jmp L" + std::to_string(end_label) + "\n";
+      code += "L" + std::to_string(false_label) + ":\n";
+      if (n->false_stmt) generate_sub(n->false_stmt, ctx, code);
+      code += "L" + std::to_string(end_label) + ":\n";
+    }
+    if (typeid(*ast) == typeid(ASTElseStmt)) {
+      std::shared_ptr<ASTElseStmt> n = std::dynamic_pointer_cast<ASTElseStmt>(ast);
+      int false_label = label_number++;
+      int end_label = label_number++;
+      if (n->cond) {
+        generate_sub(n->cond, ctx, code);
+        ctx->rsp += 8;
+        code += "pop r10\n";
+        if (n->cond->is_assignable) code += "mov r10, [r10]\n";
+        code += "cmp r10, 0\n";
+        code += "setnz r10b\n";
+        code += "jz L" + std::to_string(false_label) + "\n";
+      }
+      generate_sub(n->true_stmt, ctx, code);
+      code += "jmp L" + std::to_string(end_label) + "\n";
+      code += "L" + std::to_string(false_label) + ":\n";
+      if (n->false_stmt) generate_sub(n->false_stmt, ctx, code);
+      code += "L" + std::to_string(end_label) + ":\n";
+    }
     if (typeid(*ast) == typeid(ASTCompoundStmt)) {
       std::shared_ptr<ASTCompoundStmt> n = std::dynamic_pointer_cast<ASTCompoundStmt>(ast);
       ctx->start_scope(); // remember rsp value
@@ -213,7 +250,8 @@ namespace generator {
       code += "pop r10\n";
       if (n->left->is_assignable) code += "mov r10, [r10]\n";
       if (n->right->is_assignable) code += "mov r11, [r11]\n";
-      code += "add r10, r11\n";
+      if (n->op->sv == "+") code += "add r10, r11\n";
+      else code += "sub r10, r11\n";
       code += "push r10\n";
       ctx->rsp += 8; // 2 pop and 1 push
       n->eval_type = n->left->eval_type;

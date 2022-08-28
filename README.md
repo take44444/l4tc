@@ -43,6 +43,7 @@ The output will be
 - selection-statement
 - loop-statement
 - pointer
+- global-var
 
 ## Grammer
 ```

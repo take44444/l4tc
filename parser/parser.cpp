@@ -266,7 +266,27 @@ namespace parser {
   }
 
   std::shared_ptr<ASTCompoundStmt> parse_comp_stmt(Token **next, Error &err, int indents);
-  std::shared_ptr<AST> parse_stmt(Token **next, Error &err) {
+
+  std::shared_ptr<ASTElseStmt> parse_else_stmt(Token **next, Error &err, int indents) {
+    std::shared_ptr<ASTElseStmt> ret = std::make_shared<ASTElseStmt>();
+    if (expect_token_with_type(next, err, KwElif)) {
+      if (!(ret->cond = parse_expr(next, err))) return nullptr;
+    } else if (!expect_token_with_type(next, err, KwElse)) {
+      return nullptr;
+    }
+    if (!expect_token_with_str(next, err, "\n")) return nullptr;
+    if (!(ret->true_stmt = parse_comp_stmt(next, err, indents + 2))) return nullptr;
+    Token *saved_token = *next;
+    if (!consume_token_with_indents(next, indents) ||
+        !(ret->false_stmt = parse_else_stmt(next, err, indents))
+    ) {
+      *next = saved_token;
+      return ret;
+    }
+    return ret;
+  }
+
+  std::shared_ptr<AST> parse_stmt(Token **next, Error &err, int indents) {
     if (expect_token_with_type(next, err, KwBreak)) {
       if (!expect_token_with_str(next, err, "\n")) return nullptr;
       return std::make_shared<ASTBreakStmt>();
@@ -281,8 +301,24 @@ namespace parser {
       if (!expect_token_with_str(next, err, "\n")) return nullptr;
       return ret;
     }
+    if (expect_token_with_type(next, err, KwIf)) {
+      std::shared_ptr<ASTIfStmt> ret = std::make_shared<ASTIfStmt>();
+      if (!(ret->cond = parse_expr(next, err))) return nullptr;
+      if (!expect_token_with_str(next, err, "\n")) return nullptr;
+      if (!(ret->true_stmt = parse_comp_stmt(next, err, indents + 2))) return nullptr;
+      Token *saved_token = *next;
+      if (!consume_token_with_indents(next, indents)) {
+        *next = saved_token;
+        return ret;
+      }
+      if (!(ret->false_stmt = parse_else_stmt(next, err, indents))) {
+        *next = saved_token;
+        return ret;
+      }
+      return ret;
+    }
     return parse_expr_stmt(next, err);
-    // TODO: if, loop
+    // TODO: loop
   }
 
   std::shared_ptr<ASTCompoundStmt> parse_comp_stmt(Token **next, Error &err, int indents) {
@@ -299,11 +335,29 @@ namespace parser {
         }
       } else if (
         !(item = parse_declaration(next, err)) &&
-        !(item = parse_stmt(next, err))
+        !(item = parse_stmt(next, err, indents))
       ) {
         break;
       }
       ret->items.push_back(item);
+      // if (typeid(*item) == typeid(ASTElseStmt)) {
+      //   if (!ret->items.size()) 
+      // }
+      // if (
+      //   typeid(*ret->items.back()) == typeid(ASTIfStmt) &&
+      //   typeid(*item) == typeid(ASTElseStmt)
+      // ) {
+      //   std::dynamic_pointer_cast<ASTIfStmt>(ret->items.back())
+      //     ->false_stmt = std::dynamic_pointer_cast<ASTElseStmt>(item);
+      // } else if (
+      //   typeid(*ret->items.back()) == typeid(ASTElseStmt) &&
+      //   typeid(*item) == typeid(ASTElseStmt)
+      // ) {
+      //   std::dynamic_pointer_cast<ASTElseStmt>(ret->items.back())
+      //     ->false_stmt = std::dynamic_pointer_cast<ASTElseStmt>(item);
+      // } else {
+      //   ret->items.push_back(item);
+      // }
     }
     return nullptr;
   }
