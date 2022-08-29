@@ -18,6 +18,7 @@ namespace parser {
       message = "error: expected " + expected + ", found " + found;
     }
     std::string get_error_string() {
+      if (!token) return message;
       std::string ret = "line:" + std::to_string(token->line) +
                         "/pos:" + std::to_string(token->pos) +
                         ": " + message + '\n';

@@ -17,6 +17,7 @@ namespace parser {
   }
 
   std::shared_ptr<ASTExpr> parse_expr(Token **next, Error &err);
+
   std::shared_ptr<ASTExpr> parse_primary_expr(Token **next, Error &err) {
     Token *t;
     if (expect_token_with_str(next, err, "(")) {
@@ -25,6 +26,7 @@ namespace parser {
       if (expect_token_with_str(next, err, ")")) return ret;
     } else if (
       (t = expect_token_with_type(next, err, NumberConstant)) ||
+      (t = expect_token_with_type(next, err, StringLiteral)) ||
       (t = expect_token_with_type(next, err, Ident))
     ) {
       return std::make_shared<ASTSimpleExpr>(t);

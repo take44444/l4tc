@@ -104,6 +104,12 @@ namespace tokenizer {
       else if (ret->sv == "str") ret->type = KwStr;           // str
       return ret;
     }
+    if ('"' == *p) {
+      int len = 1;
+      while (p[len] && p[len] != '"') len++;
+      if (p[len] != '"') return new Token(line, src, p, len, Unknown);
+      return new Token(line, src, p, ++len, StringLiteral);
+    }
     if ('!' == *p && p[1] == '=') {
       return new Token(line, src, p, 2, Punctuator);                         // !=
     }
