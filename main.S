@@ -1,7 +1,7 @@
 .intel_syntax noprefix
 .text
-.global test
-test:
+.global fib
+fib:
 push rbp
 mov rbp, rsp
 sub rsp, 8
@@ -11,7 +11,7 @@ push r10
 pop r10
 mov r10, [r10]
 cmp r10, 0
-setnz r10b
+setnz r8b
 jz L0
 lea r10, [rbp - 8]
 push r10
@@ -24,10 +24,10 @@ sub r10, r11
 push r10
 pop r10
 cmp r10, 0
-setnz r10b
+setnz r8b
 jz L2
-.global test
-mov r10, [rip + test@GOTPCREL]
+.global fib
+mov r10, [rip + fib@GOTPCREL]
 push r10
 lea r10, [rbp - 8]
 push r10
@@ -42,8 +42,8 @@ pop rdi
 pop rax
 call rax
 push rax
-.global test
-mov r10, [rip + test@GOTPCREL]
+.global fib
+mov r10, [rip + fib@GOTPCREL]
 push r10
 lea r10, [rbp - 8]
 push r10
@@ -106,10 +106,10 @@ main:
 push rbp
 mov rbp, rsp
 sub rsp, 0
-.global test
-mov r10, [rip + test@GOTPCREL]
+.global fib
+mov r10, [rip + fib@GOTPCREL]
 push r10
-mov r10, 12
+mov r10, 13
 push r10
 pop rdi
 pop rax

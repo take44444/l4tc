@@ -1,12 +1,12 @@
 
-func test(num n) -> num
+func fib(num n) -> num
   if n
     if n-1
-      return test(n-2) + test(n-1)
+      return fib(n-2) + fib(n-1)
     else
       return 1
   else
     return 1
 
 func main() -> num
-  return test(12)
+  return fib(13)
