@@ -9,4 +9,5 @@ func fib(num n) -> num
     return 1
 
 func main() -> num
-  return fib(13)
+  printf("%d\n", fib(30))
+  return 0

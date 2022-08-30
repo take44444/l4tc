@@ -13,6 +13,6 @@ int main() {
     parser::print_ast(ast);
   } else {
     // parser::print_ast(ast);
-    std::cout << generator::generate(ast) << std::endl;
+    std::cout << generator::generate(ast);
   }
 }

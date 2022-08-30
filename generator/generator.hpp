@@ -18,23 +18,37 @@ namespace generator {
     TypeNum() : EvalType() {}
   };
 
-  // class TypeVoid : public EvalType {
-  //   public:
-  //   TypeVoid() : EvalType() {}
-  // };
-
   class TypePointer : public EvalType {
     public:
     std::shared_ptr<EvalType> pointer_of;
     TypePointer(std::shared_ptr<EvalType> of) : EvalType(), pointer_of(of) {}
   };
 
+  class TypeChar : public EvalType {
+    public:
+    TypeChar() : EvalType() {}
+  };
+
+  class TypeArray : public EvalType {
+    public:
+    std::shared_ptr<EvalType> array_of;
+    int size;
+    TypeArray(std::shared_ptr<EvalType> of, int sz) : EvalType(), array_of(of), size(sz) {}
+  };
+
   class TypeFunc : public EvalType {
     public:
     std::vector<std::shared_ptr<EvalType>> type_args;
     std::shared_ptr<EvalType> ret_type;
-    TypeFunc(std::vector<std::shared_ptr<EvalType>> &ta, std::shared_ptr<EvalType> rt)
-    : type_args(ta), ret_type(rt) {}
+    explicit TypeFunc(std::vector<std::shared_ptr<EvalType>> &ta, std::shared_ptr<EvalType> rt)
+    : EvalType(), type_args(ta), ret_type(rt) {}
+    explicit TypeFunc(std::shared_ptr<EvalType> rt)
+    : EvalType(), ret_type(rt) {}
+  };
+
+  class TypeAny : public EvalType {
+    public:
+    TypeAny() : EvalType() {}
   };
 
   // class LoopInfo {
@@ -69,11 +83,12 @@ namespace generator {
   class Context {
     public:
     int rsp;
-    std::vector<int> saved_rsp;
+    // std::vector<int> saved_rsp;
     std::vector<std::map<std::string, std::shared_ptr<LocalVar>>> scopes_local_vars;
     std::map<std::string, std::shared_ptr<GlobalVar>> global_vars;
+    std::vector<std::pair<std::string, std::string>> strs;
 
-    Context() : rsp(0), saved_rsp() {}
+    Context() : rsp(0) {}
 
     void add_global_var(std::string key, std::shared_ptr<EvalType> type) {
       global_vars.insert({key, std::make_shared<GlobalVar>(key, type)});
@@ -83,6 +98,10 @@ namespace generator {
       scopes_local_vars.back().insert(
         {key, std::make_shared<LocalVar>(-rsp, type)}
       );
+    }
+
+    void add_str(std::string label, std::string_view data) {
+      strs.push_back({label, std::string(data)});
     }
 
     std::shared_ptr<GlobalVar> get_global_var(std::string_view key) {
@@ -101,15 +120,15 @@ namespace generator {
     }
 
     void start_scope() {
-      saved_rsp.push_back(rsp);
+      // saved_rsp.push_back(rsp);
       scopes_local_vars.push_back(
         std::map<std::string, std::shared_ptr<LocalVar>>()
       );
     }
 
     void end_scope() {
-      assert(saved_rsp.back() == rsp);
-      saved_rsp.pop_back();
+      // assert(saved_rsp.back() == rsp);
+      // saved_rsp.pop_back();
       scopes_local_vars.pop_back();
     }
 
@@ -117,9 +136,10 @@ namespace generator {
     //   return LoopInfo(-1);
     // }
 
-    bool is_rsp_aligned() {
-      return !(rsp & 0xF);
-    }
+    // bool is_rsp_aligned() {
+    //   std::cerr << rsp << std::endl;
+    //   return !(rsp & 0xF);
+    // }
   };
   std::string generate(std::shared_ptr<AST> ast);
 }
