@@ -40,10 +40,19 @@ The output will be
 ```
 
 ## TODO
-- selection-statement
-- loop-statement
-- pointer
-- global-var
+- グローバル変数
+- 配列
+- 構造体
+- ポインタ，関数ポインタ，参照
+- ポインタの型は厳密であり，`num*`，`array<num>[2]*`，`array<num>[3]*`，`array<array<num>[2]>[2]*`は全て別の型として解析され，暗黙的な変換を許さない．
+- typeof
+- 繰り返し文
+- ポインタ変数には，自身よりライフタイムが大きい変数のアドレスしか代入できないようにする．
+- extern "C" func ????
+- libcの関数からの返り値の型はAny
+- ブロックにunsafe属性を設け，型Anyはunsafeブロック内にしか存在できないようにする．
+- static
+- マクロ
 
 ## Grammer
 ```
