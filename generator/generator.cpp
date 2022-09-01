@@ -228,7 +228,7 @@ namespace generator {
         generate_text_section(stmt, ctx, code);
       }
       ctx->rsp = saved_rsp;
-      code += "mov rsp, " + std::to_string(saved_rsp) + "\n";
+      code += "lea rsp, [rbp - " + std::to_string(-saved_rsp) + "]\n";
       ctx->end_scope();
       return;
     }

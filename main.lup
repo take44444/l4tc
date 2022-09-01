@@ -17,13 +17,21 @@ func main() -> num
   funcptr (num) -> funcptr (num, num) -> num fp
   ptr<funcptr (num) -> funcptr (num, num) -> num> fpp
 
+    array<char>[15] s
+    ptr<array<char>[15]> sp
+    ptr<ptr<array<char>[15]>> spp
+    spp: &sp
+    sp: &s
+    s: "Hello, World!\n"
+    printf(*spp)
+
   a: 0
   p: &a
   fp: f
   fpp: &fp
 
-  printf("%d\n", ((*fpp)(*p))(100, 200))
+  printf(&"%d\n", ((*fpp)(*p))(100, 200))
   *p: *p + 1
-  printf("%d\n", ((*fpp)(a))(100, 200))
+  printf(&"%d\n", ((*fpp)(a))(100, 200))
 
   return 0

@@ -141,12 +141,10 @@ namespace tokenizer {
       return new Token(line, src, p, 2, Punctuator);                         // |
     }
     if ('<' == *p) {
-      if (p[1] == '<') return new Token(line, src, p, 2, Punctuator);        // <<
       if (p[1] == '=') return new Token(line, src, p, 2, Punctuator);        // <=
       return new Token(line, src, p, 1, Punctuator);                         // <
     }
     if ('>' == *p) {
-      if (p[1] == '>') return new Token(line, src, p, 2, Punctuator);        // >>
       if (p[1] == '=') return new Token(line, src, p, 2, Punctuator);        // >=
       return new Token(line, src, p, 1, Punctuator);                         // >
     }

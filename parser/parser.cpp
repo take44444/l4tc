@@ -138,17 +138,18 @@ namespace parser {
   }
 
   std::shared_ptr<ASTExpr> parse_shift_expr(Token **next, Error &err) {
-    std::shared_ptr<ASTExpr> left, ret = parse_additive_expr(next, err);
-    if (!ret) return nullptr;
-    Token *t;
-    while ((t = expect_token_with_str(next, err, "<<")) ||
-           (t = expect_token_with_str(next, err, ">>"))) {
-      left = ret;
-      ret = std::make_shared<ASTShiftExpr>(t);
-      ret->left = left;
-      if (!(ret->right = parse_additive_expr(next, err))) return nullptr;
-    }
-    return ret;
+    // std::shared_ptr<ASTExpr> left, ret = parse_additive_expr(next, err);
+    // if (!ret) return nullptr;
+    // Token *t;
+    // while ((t = expect_token_with_str(next, err, "<<")) ||
+    //        (t = expect_token_with_str(next, err, ">>"))) {
+    //   left = ret;
+    //   ret = std::make_shared<ASTShiftExpr>(t);
+    //   ret->left = left;
+    //   if (!(ret->right = parse_additive_expr(next, err))) return nullptr;
+    // }
+    // return ret;
+    return parse_additive_expr(next, err);
   }
 
   std::shared_ptr<ASTExpr> parse_relational_expr(Token **next, Error &err) {

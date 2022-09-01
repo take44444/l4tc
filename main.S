@@ -22,7 +22,7 @@ pop rax
 mov rsp, rbp
 pop rbp
 ret
-mov rsp, -16
+lea rsp, [rbp - 16]
 mov rsp, rbp
 pop rbp
 ret
@@ -48,7 +48,7 @@ pop rax
 mov rsp, rbp
 pop rbp
 ret
-mov rsp, -16
+lea rsp, [rbp - 16]
 mov rsp, rbp
 pop rbp
 ret
@@ -72,7 +72,7 @@ pop rax
 mov rsp, rbp
 pop rbp
 ret
-mov rsp, -8
+lea rsp, [rbp - 8]
 jmp L1
 L0:
 .global add
@@ -82,12 +82,12 @@ pop rax
 mov rsp, rbp
 pop rbp
 ret
-mov rsp, -8
+lea rsp, [rbp - 8]
 jmp L3
 L2:
 L3:
 L1:
-mov rsp, -8
+lea rsp, [rbp - 8]
 mov rsp, rbp
 pop rbp
 ret
@@ -99,6 +99,58 @@ sub rsp, 8
 sub rsp, 8
 sub rsp, 8
 sub rsp, 8
+sub rsp, 16
+sub rsp, 8
+sub rsp, 8
+lea r10, [rbp - 56]
+push r10
+lea r10, [rbp - 64]
+push r10
+pop r10
+pop r11
+mov [r10], r11
+push r11
+pop r10
+lea r10, [rbp - 48]
+push r10
+lea r10, [rbp - 56]
+push r10
+pop r10
+pop r11
+mov [r10], r11
+push r11
+pop r10
+lea r10, [rip + L4]
+push r10
+lea r10, [rbp - 48]
+push r10
+pop r10
+pop r11
+push r11
+mov r12, [r11]
+mov [r10], r12
+add r10, 8
+add r11, 8
+mov r12, [r11]
+mov [r10], r12
+add r10, 8
+add r11, 8
+pop r10
+.global printf
+mov r10, [rip + printf@GOTPCREL]
+push r10
+lea r10, [rbp - 64]
+push r10
+pop r10
+mov r10, [r10]
+push r10
+pop rdi
+mov rdi, [rdi]
+pop rax
+call rax
+push rax
+pop r10
+lea rsp, [rbp - 32]
 mov r10, 0
 push r10
 lea r10, [rbp - 8]
@@ -139,7 +191,7 @@ pop r10
 .global printf
 mov r10, [rip + printf@GOTPCREL]
 push r10
-lea r10, [rip + L4]
+lea r10, [rip + L5]
 push r10
 lea r10, [rbp - 32]
 push r10
@@ -197,7 +249,7 @@ pop r10
 .global printf
 mov r10, [rip + printf@GOTPCREL]
 push r10
-lea r10, [rip + L5]
+lea r10, [rip + L6]
 push r10
 lea r10, [rbp - 32]
 push r10
@@ -233,12 +285,14 @@ pop rax
 mov rsp, rbp
 pop rbp
 ret
-mov rsp, 0
+lea rsp, [rbp - 0]
 mov rsp, rbp
 pop rbp
 ret
 .data
 .align 8
-L4: .asciz "%d\n"
+L4: .asciz "Hello, World!\n"
 .align 8
 L5: .asciz "%d\n"
+.align 8
+L6: .asciz "%d\n"
