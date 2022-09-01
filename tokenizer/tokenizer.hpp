@@ -6,24 +6,23 @@ namespace tokenizer {
   enum TokenType {
     Delimiter,      // space
     Punctuator,     // , ( ) + <- -> = > & * | && || \n
-    // 数値
     NumberConstant, // 0 3 0x07 0b10
-    // 文字列リテラル
     StringLiteral,  // "hello world"
-    // 変数
     Ident,          // vAr_n4m3
-    // 予約語
+    KwArray,
     KwBreak,        // break
+    KwChar,
     KwContinue,     // continue
     KwElif,         // elif
     KwElse,         // else
     KwFunc,         // func
-    KwFuncp,         // funcp
+    KwFuncptr,      // funcptr
     KwIf,           // if
     KwLoop,         // loop
+    KwNullptr,      // nullptr
     KwNum,          // num
+    KwPtr,          // ptr
     KwReturn,       // return
-    KwStr,          // str
     // Unexpected Token
     Unknown,        // unknown
   };

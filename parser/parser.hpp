@@ -39,7 +39,15 @@ namespace parser {
   class ASTTypeSpec : public AST {
     public:
     Token *op;
-    ASTTypeSpec(Token *t) : AST(), op(t) {}
+    std::shared_ptr<ASTTypeSpec> of;
+    int size;
+    std::vector<std::shared_ptr<ASTTypeSpec>> args;
+    std::shared_ptr<ASTTypeSpec> type_spec;
+    ASTTypeSpec(Token *t) : AST(), op(t) {
+      of = nullptr;
+      type_spec = nullptr;
+      size = 0;
+    }
   };
 
   class ASTExpr : public AST {
@@ -60,6 +68,13 @@ namespace parser {
     public:
     std::shared_ptr<ASTExpr> expr;
     ASTPrimaryExpr() : ASTExpr() {}
+  };
+
+  class ASTUnaryExpr : public ASTExpr {
+    public:
+    Token *op;
+    std::shared_ptr<ASTExpr> expr;
+    ASTUnaryExpr(Token *t) : ASTExpr(), op(t) {}
   };
 
   class ASTFuncCallExpr : public ASTExpr {

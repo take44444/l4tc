@@ -14,8 +14,12 @@ namespace tokenizer {
         return "StringLiteral";
       case Ident:
         return "Ident";
+      case KwArray:
+        return "KwArray";
       case KwBreak:
         return "KwBreak";
+      case KwChar:
+        return "KwChar";
       case KwContinue:
         return "KwContinue";
       case KwElif:
@@ -24,16 +28,20 @@ namespace tokenizer {
         return "KwElse";
       case KwFunc:
         return "KwFunc";
+      case KwFuncptr:
+        return "KwFuncptr";
       case KwIf:
         return "KwIf";
       case KwLoop:
         return "KwLoop";
+      case KwNullptr:
+        return "KwNullptr";
       case KwNum:
         return "KwNum";
+      case KwPtr:
+        return "KwPtr";
       case KwReturn:
         return "KwReturn";
-      case KwStr:
-        return "KwStr";
       case Unknown:
         return "Unknown";
       default:
@@ -52,8 +60,12 @@ namespace tokenizer {
         return "string-literal";
       case Ident:
         return "identifier";
+      case KwArray:
+        return "type-specifier";
       case KwBreak:
         return "break-statement";
+      case KwChar:
+        return "type-specifier";
       case KwContinue:
         return "continue-statement";
       case KwElif:
@@ -62,16 +74,20 @@ namespace tokenizer {
         return "else-statement";
       case KwFunc:
         return "external-declaration";
+      case KwFuncptr:
+        return "type-specifier";
       case KwIf:
         return "if-statement";
       case KwLoop:
         return "loop-statement";
+      case KwNullptr:
+        return "nullptr";
       case KwNum:
+        return "type-specifier";
+      case KwPtr:
         return "type-specifier";
       case KwReturn:
         return "return-statement";
-      case KwStr:
-        return "type-specifier";
       default:
         return "unknown";
     }
@@ -88,20 +104,23 @@ namespace tokenizer {
     if (('A' <= *p && *p <= 'Z') || ('a' <= *p && *p <= 'z') || *p == '_') {
       int len = 0;
       while (('A' <= p[len] && p[len] <= 'Z') ||
-            ('a' <= p[len] && p[len] <= 'z') || p[len] == '_' ||
-            ('0' <= p[len] && p[len] <= '9')) len++;
+             ('a' <= p[len] && p[len] <= 'z') || p[len] == '_' ||
+             ('0' <= p[len] && p[len] <= '9')) len++;
       Token *ret = new Token(line, src, p, len, Ident);
-      if (ret->sv == "break") ret->type = KwBreak;            // break
+      if (ret->sv == "array") ret->type = KwArray;            // array
+      else if (ret->sv == "break") ret->type = KwBreak;       // break
+      else if (ret->sv == "char") ret->type = KwChar;         // char
       else if (ret->sv == "continue") ret->type = KwContinue; // continue
       else if (ret->sv == "elif") ret->type = KwElif;         // elif
       else if (ret->sv == "else") ret->type = KwElse;         // else
       else if (ret->sv == "func") ret->type = KwFunc;         // func
-      else if (ret->sv == "funcp") ret->type = KwFuncp;         // funcp
+      else if (ret->sv == "funcptr") ret->type = KwFuncptr;   // funcptr
       else if (ret->sv == "if") ret->type = KwIf;             // if
       else if (ret->sv == "loop") ret->type = KwLoop;         // loop
+      else if (ret->sv == "nullptr") ret->type = KwNullptr;   // nullptr
       else if (ret->sv == "num") ret->type = KwNum;           // num
+      else if (ret->sv == "ptr") ret->type = KwPtr;           // ptr
       else if (ret->sv == "return") ret->type = KwReturn;     // return
-      else if (ret->sv == "str") ret->type = KwStr;           // str
       return ret;
     }
     if ('"' == *p) {

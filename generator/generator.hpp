@@ -9,31 +9,39 @@ namespace generator {
   using namespace parser;
   class EvalType {
     public:
+    int size;
     EvalType() {}
     virtual ~EvalType() = default;
   };
 
   class TypeNum : public EvalType {
     public:
-    TypeNum() : EvalType() {}
+    TypeNum() : EvalType() {
+      size = 8;
+    }
   };
 
-  class TypePointer : public EvalType {
+  class TypePtr : public EvalType {
     public:
-    std::shared_ptr<EvalType> pointer_of;
-    TypePointer(std::shared_ptr<EvalType> of) : EvalType(), pointer_of(of) {}
+    std::shared_ptr<EvalType> of;
+    TypePtr(std::shared_ptr<EvalType> of) : EvalType(), of(of) {
+      size = 8;
+    }
   };
 
   class TypeChar : public EvalType {
     public:
-    TypeChar() : EvalType() {}
+    TypeChar() : EvalType() {
+      size = 1;
+    }
   };
 
   class TypeArray : public EvalType {
     public:
-    std::shared_ptr<EvalType> array_of;
-    int size;
-    TypeArray(std::shared_ptr<EvalType> of, int sz) : EvalType(), array_of(of), size(sz) {}
+    std::shared_ptr<EvalType> of;
+    TypeArray(std::shared_ptr<EvalType> of, int sz) : EvalType(), of(of) {
+      size = sz * of->size;
+    }
   };
 
   class TypeFunc : public EvalType {
@@ -41,9 +49,13 @@ namespace generator {
     std::vector<std::shared_ptr<EvalType>> type_args;
     std::shared_ptr<EvalType> ret_type;
     explicit TypeFunc(std::vector<std::shared_ptr<EvalType>> &ta, std::shared_ptr<EvalType> rt)
-    : EvalType(), type_args(ta), ret_type(rt) {}
+    : EvalType(), type_args(ta), ret_type(rt) {
+      size = 8;
+    }
     explicit TypeFunc(std::shared_ptr<EvalType> rt)
-    : EvalType(), ret_type(rt) {}
+    : EvalType(), ret_type(rt) {
+      size = 8;
+    }
   };
 
   class TypeAny : public EvalType {
@@ -86,9 +98,14 @@ namespace generator {
     // std::vector<int> saved_rsp;
     std::vector<std::map<std::string, std::shared_ptr<LocalVar>>> scopes_local_vars;
     std::map<std::string, std::shared_ptr<GlobalVar>> global_vars;
+    std::map<std::string, std::shared_ptr<GlobalVar>> funcs;
     std::vector<std::pair<std::string, std::string>> strs;
 
     Context() : rsp(0) {}
+
+    void add_func(std::string key, std::shared_ptr<EvalType> type) {
+      funcs.insert({key, std::make_shared<GlobalVar>(key, type)});
+    }
 
     void add_global_var(std::string key, std::shared_ptr<EvalType> type) {
       global_vars.insert({key, std::make_shared<GlobalVar>(key, type)});
@@ -102,6 +119,12 @@ namespace generator {
 
     void add_str(std::string label, std::string_view data) {
       strs.push_back({label, std::string(data)});
+    }
+
+    std::shared_ptr<GlobalVar> get_func(std::string_view key) {
+      auto it = funcs.find(std::string(key));
+      if (it == funcs.end()) return nullptr;
+      return it->second;
     }
 
     std::shared_ptr<GlobalVar> get_global_var(std::string_view key) {

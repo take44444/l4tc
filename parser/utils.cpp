@@ -5,7 +5,8 @@ namespace parser {
     return (
       typeid(*node) == typeid(ASTSimpleExpr) ||
       typeid(*node) == typeid(ASTPrimaryExpr) ||
-      typeid(*node) == typeid(ASTFuncCallExpr)
+      typeid(*node) == typeid(ASTFuncCallExpr) ||
+      typeid(*node) == typeid(ASTUnaryExpr)
     );
   }
 

@@ -3,11 +3,47 @@
 namespace parser {
   std::shared_ptr<ASTTypeSpec> parse_type_spec(Token **next, Error &err) {
     Token *t;
-    if (
-      (t = expect_token_with_type(next, err, KwNum)) ||
-      (t = expect_token_with_type(next, err, KwStr))
-    ) {
+    if ((t = expect_token_with_type(next, err, KwNum))) {
       return std::make_shared<ASTTypeSpec>(t);
+    }
+    if ((t = expect_token_with_type(next, err, KwChar))) {
+      return std::make_shared<ASTTypeSpec>(t);
+    }
+    if ((t = expect_token_with_type(next, err, KwPtr))) {
+      std::shared_ptr<ASTTypeSpec> ret = std::make_shared<ASTTypeSpec>(t);
+      if (!expect_token_with_str(next, err, "<")) return nullptr;
+      if (!(ret->of = parse_type_spec(next, err))) return nullptr;
+      if (!expect_token_with_str(next, err, ">")) return nullptr;
+      return ret;
+    }
+    if ((t = expect_token_with_type(next, err, KwArray))) {
+      std::shared_ptr<ASTTypeSpec> ret = std::make_shared<ASTTypeSpec>(t);
+      if (!expect_token_with_str(next, err, "<")) return nullptr;
+      if (!(ret->of = parse_type_spec(next, err))) return nullptr;
+      if (!expect_token_with_str(next, err, ">")) return nullptr;
+      if (!expect_token_with_str(next, err, "[")) return nullptr;
+      if ((t = expect_token_with_type(next, err, NumberConstant))) {
+        ret->size = std::stoi(std::string(t->sv));
+      } else return nullptr;
+      if (!expect_token_with_str(next, err, "]")) return nullptr;
+      return ret;
+    }
+    if ((t = expect_token_with_type(next, err, KwFuncptr))) {
+      std::shared_ptr<ASTTypeSpec> ret = std::make_shared<ASTTypeSpec>(t);
+      if (!expect_token_with_str(next, err, "(")) return nullptr;
+      while (!expect_token_with_str(next, err, ")")) {
+        std::shared_ptr<ASTTypeSpec> type;
+        if (!(type = parse_type_spec(next, err))) return nullptr;
+        ret->args.push_back(type);
+        if (expect_token_with_str(next, err, ",")) continue;
+        // end
+        if (!expect_token_with_str(next, err, ")")) return nullptr;
+        break;
+      }
+      // token "->" should be here
+      if (!expect_token_with_str(next, err, "->")) return nullptr;
+      if (!(ret->type_spec = parse_type_spec(next, err))) return nullptr;
+      return ret;
     }
     return nullptr;
   }
@@ -24,11 +60,9 @@ namespace parser {
       std::shared_ptr<ASTPrimaryExpr> ret = std::make_shared<ASTPrimaryExpr>();
       if (!(ret->expr = parse_expr(next, err))) return nullptr;
       if (expect_token_with_str(next, err, ")")) return ret;
-    } else if (
-      (t = expect_token_with_type(next, err, NumberConstant)) ||
-      (t = expect_token_with_type(next, err, StringLiteral)) ||
-      (t = expect_token_with_type(next, err, Ident))
-    ) {
+    } else if ((t = expect_token_with_type(next, err, NumberConstant)) ||
+               (t = expect_token_with_type(next, err, StringLiteral)) ||
+               (t = expect_token_with_type(next, err, Ident))) {
       return std::make_shared<ASTSimpleExpr>(t);
     }
     return nullptr;
@@ -64,6 +98,13 @@ namespace parser {
   }
 
   std::shared_ptr<ASTExpr> parse_unary_expr(Token **next, Error &err) {
+    Token *t;
+    if ((t = expect_token_with_str(next, err, "*")) ||
+        (t = expect_token_with_str(next, err, "&"))) {
+      std::shared_ptr<ASTUnaryExpr> ret = std::make_shared<ASTUnaryExpr>(t);
+      ret->expr = parse_unary_expr(next, err);
+      return ret;
+    }
     return parse_postfix_expr(next, err);
   }
 
@@ -71,11 +112,9 @@ namespace parser {
     std::shared_ptr<ASTExpr> left, ret = parse_unary_expr(next, err);
     if (!ret) return nullptr;
     Token *t;
-    while (
-      (t = expect_token_with_str(next, err, "*")) ||
-      (t = expect_token_with_str(next, err, "/")) ||
-      (t = expect_token_with_str(next, err, "%"))
-    ) {
+    while ((t = expect_token_with_str(next, err, "*")) ||
+           (t = expect_token_with_str(next, err, "/")) ||
+           (t = expect_token_with_str(next, err, "%"))) {
       left = ret;
       ret = std::make_shared<ASTMultiplicativeExpr>(t);
       ret->left = left;
@@ -88,10 +127,8 @@ namespace parser {
     std::shared_ptr<ASTExpr> left, ret = parse_multiplicative_expr(next, err);
     if (!ret) return nullptr;
     Token *t;
-    while (
-      (t = expect_token_with_str(next, err, "+")) ||
-      (t = expect_token_with_str(next, err, "-"))
-    ) {
+    while ((t = expect_token_with_str(next, err, "+")) ||
+           (t = expect_token_with_str(next, err, "-"))) {
       left = ret;
       ret = std::make_shared<ASTAdditiveExpr>(t);
       ret->left = left;
@@ -104,10 +141,8 @@ namespace parser {
     std::shared_ptr<ASTExpr> left, ret = parse_additive_expr(next, err);
     if (!ret) return nullptr;
     Token *t;
-    while (
-      (t = expect_token_with_str(next, err, "<<")) ||
-      (t = expect_token_with_str(next, err, ">>"))
-    ) {
+    while ((t = expect_token_with_str(next, err, "<<")) ||
+           (t = expect_token_with_str(next, err, ">>"))) {
       left = ret;
       ret = std::make_shared<ASTShiftExpr>(t);
       ret->left = left;
@@ -120,12 +155,10 @@ namespace parser {
     std::shared_ptr<ASTExpr> left, ret = parse_shift_expr(next, err);
     if (!ret) return nullptr;
     Token *t;
-    while (
-      (t = expect_token_with_str(next, err, "<")) ||
-      (t = expect_token_with_str(next, err, ">")) ||
-      (t = expect_token_with_str(next, err, "<=")) ||
-      (t = expect_token_with_str(next, err, ">="))
-    ) {
+    while ((t = expect_token_with_str(next, err, "<")) ||
+           (t = expect_token_with_str(next, err, ">")) ||
+           (t = expect_token_with_str(next, err, "<=")) ||
+           (t = expect_token_with_str(next, err, ">="))) {
       left = ret;
       ret = std::make_shared<ASTRelationalExpr>(t);
       ret->left = left;
@@ -138,10 +171,8 @@ namespace parser {
     std::shared_ptr<ASTExpr> left, ret = parse_relational_expr(next, err);
     if (!ret) return nullptr;
     Token *t;
-    while (
-      (t = expect_token_with_str(next, err, "==")) ||
-      (t = expect_token_with_str(next, err, "!="))
-    ) {
+    while ((t = expect_token_with_str(next, err, "=")) ||
+           (t = expect_token_with_str(next, err, "!="))) {
       left = ret;
       ret = std::make_shared<ASTEqualityExpr>(t);
       ret->left = left;
@@ -328,17 +359,16 @@ namespace parser {
     std::shared_ptr<AST> item;
     while (1) {
       if (!consume_token_with_indents(next, indents)) {
-        if (!*next || (*next)->sv.front() != ' ' || (int)(*next)->sv.length() < indents) {
+        if (!*next || (*next)->sv.front() != ' ' ||
+            (int)(*next)->sv.length() < indents) {
           // compound-stmt end
           return ret;
         } else {
         // inner compound-stmt
           if (!(item = parse_comp_stmt(next, err, indents + 2))) break;
         }
-      } else if (
-        !(item = parse_declaration(next, err)) &&
-        !(item = parse_stmt(next, err, indents))
-      ) {
+      } else if (!(item = parse_stmt(next, err, indents)) &&
+                 !(item = parse_declaration(next, err))) {
         break;
       }
       ret->items.push_back(item);

@@ -1,13 +1,29 @@
 
-func fib(num n) -> num
-  if n
-    if n-1
-      return fib(n-2) + fib(n-1)
-    else
-      return 1
+func add(num x, num y) -> num
+  return x + y
+
+func sub(num x, num y) -> num
+  return x - y
+
+func f(num x) -> funcptr (num, num) -> num
+  if x
+    return sub
   else
-    return 1
+    return add
 
 func main() -> num
-  printf("%d\n", fib(30))
+  num a
+  ptr<num> p
+  funcptr (num) -> funcptr (num, num) -> num fp
+  ptr<funcptr (num) -> funcptr (num, num) -> num> fpp
+
+  a: 0
+  p: &a
+  fp: f
+  fpp: &fp
+
+  printf("%d\n", ((*fpp)(*p))(100, 200))
+  *p: *p + 1
+  printf("%d\n", ((*fpp)(a))(100, 200))
+
   return 0
