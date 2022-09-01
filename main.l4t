@@ -1,3 +1,4 @@
+num g1, g2
 
 func add(num x, num y) -> num
   return x + y
@@ -12,11 +13,15 @@ func f(num x) -> funcptr (num, num) -> num
     return add
 
 func main() -> num
+  ptr<num> g1p
   num a
   ptr<num> p
   funcptr (num) -> funcptr (num, num) -> num fp
   ptr<funcptr (num) -> funcptr (num, num) -> num> fpp
 
+  g1p: &g1
+  g1: 100
+  g2: 200
   a: 0
   p: &a
   fp: f
@@ -30,8 +35,8 @@ func main() -> num
     s: "Hello, World!\n"
     printf(*spp)
 
-  printf(&"%d\n", ((*fpp)(*p))(100, 200))
+  printf(&"%d\n", ((*fpp)(*p))(*g1p, g2))
   *p: *p + 1
-  printf(&"%d\n", ((*fpp)(a))(100, 200))
+  printf(&"%d\n", ((*fpp)(a))(g1, g2))
 
   return 0

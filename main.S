@@ -99,6 +99,37 @@ sub rsp, 8
 sub rsp, 8
 sub rsp, 8
 sub rsp, 8
+sub rsp, 8
+.global g1
+mov r10, [rip + g1@GOTPCREL]
+push r10
+lea r10, [rbp - 40]
+push r10
+pop r10
+pop r11
+mov [r10], r11
+push r11
+pop r10
+mov r10, 100
+push r10
+.global g1
+mov r10, [rip + g1@GOTPCREL]
+push r10
+pop r10
+pop r11
+mov [r10], r11
+push r11
+pop r10
+mov r10, 200
+push r10
+.global g2
+mov r10, [rip + g2@GOTPCREL]
+push r10
+pop r10
+pop r11
+mov [r10], r11
+push r11
+pop r10
 mov r10, 0
 push r10
 lea r10, [rbp - 8]
@@ -139,6 +170,15 @@ pop r10
 sub rsp, 16
 sub rsp, 8
 sub rsp, 8
+lea r10, [rbp - 64]
+push r10
+lea r10, [rbp - 72]
+push r10
+pop r10
+pop r11
+mov [r10], r11
+push r11
+pop r10
 lea r10, [rbp - 56]
 push r10
 lea r10, [rbp - 64]
@@ -148,18 +188,9 @@ pop r11
 mov [r10], r11
 push r11
 pop r10
-lea r10, [rbp - 48]
-push r10
-lea r10, [rbp - 56]
-push r10
-pop r10
-pop r11
-mov [r10], r11
-push r11
-pop r10
 lea r10, [rip + L4]
 push r10
-lea r10, [rbp - 48]
+lea r10, [rbp - 56]
 push r10
 pop r10
 pop r11
@@ -176,7 +207,7 @@ pop r10
 .global printf
 mov r10, [rip + printf@GOTPCREL]
 push r10
-lea r10, [rbp - 64]
+lea r10, [rbp - 72]
 push r10
 pop r10
 mov r10, [r10]
@@ -184,10 +215,12 @@ push r10
 pop rdi
 mov rdi, [rdi]
 pop rax
+sub rsp, 8
 call rax
+add rsp, 8
 push rax
 pop r10
-lea rsp, [rbp - 32]
+lea rsp, [rbp - 40]
 .global printf
 mov r10, [rip + printf@GOTPCREL]
 push r10
@@ -207,21 +240,33 @@ pop rdi
 mov rdi, [rdi]
 pop rax
 mov rax, [rax]
+sub rsp, 8
 call rax
+add rsp, 8
 push rax
-mov r10, 100
+lea r10, [rbp - 40]
 push r10
-mov r10, 200
+pop r10
+mov r10, [r10]
 push r10
+.global g2
+mov r10, [rip + g2@GOTPCREL]
+push r10
+pop rsi
+mov rsi, [rsi]
+pop rdi
+mov rdi, [rdi]
+pop rax
+sub rsp, 8
+call rax
+add rsp, 8
+push rax
 pop rsi
 pop rdi
 pop rax
+sub rsp, 8
 call rax
-push rax
-pop rsi
-pop rdi
-pop rax
-call rax
+add rsp, 8
 push rax
 pop r10
 lea r10, [rbp - 16]
@@ -262,21 +307,31 @@ pop rdi
 mov rdi, [rdi]
 pop rax
 mov rax, [rax]
+sub rsp, 8
 call rax
+add rsp, 8
 push rax
-mov r10, 100
+.global g1
+mov r10, [rip + g1@GOTPCREL]
 push r10
-mov r10, 200
+.global g2
+mov r10, [rip + g2@GOTPCREL]
 push r10
+pop rsi
+mov rsi, [rsi]
+pop rdi
+mov rdi, [rdi]
+pop rax
+sub rsp, 8
+call rax
+add rsp, 8
+push rax
 pop rsi
 pop rdi
 pop rax
+sub rsp, 8
 call rax
-push rax
-pop rsi
-pop rdi
-pop rax
-call rax
+add rsp, 8
 push rax
 pop r10
 mov r10, 0
@@ -296,3 +351,11 @@ L4: .asciz "Hello, World!\n"
 L5: .asciz "%d\n"
 .align 8
 L6: .asciz "%d\n"
+.align 8
+.global g1
+g1:
+.byte 0, 0, 0, 0, 0, 0, 0, 0
+.align 8
+.global g2
+g2:
+.byte 0, 0, 0, 0, 0, 0, 0, 0

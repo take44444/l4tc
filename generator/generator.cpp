@@ -1,8 +1,12 @@
 #include "./generator.hpp"
 
 namespace generator {
-  static int label_number = 0;
   const std::string param_reg_names[6] = {"rdi", "rsi", "rdx", "rcx", "r8",  "r9"};
+
+  std::string get_label() {
+    static int label_number = 0;
+    return "L" + std::to_string(label_number++);
+  }
 
   inline int string_literal_length(std::string_view sl) {
     int ret = sl.length() - 2 + 1;
@@ -16,6 +20,20 @@ namespace generator {
 
   inline int align_8(int x) {
     return ((x + 7) >> 3) << 3;
+  }
+
+  void push(std::string reg, std::shared_ptr<Context> ctx, std::string &code) {
+    code += "push " + reg + "\n";
+    ctx->rsp -= 8;
+  }
+
+  void pop(std::string reg, std::shared_ptr<Context> ctx, std::string &code) {
+    code += "pop " + reg + "\n";
+    ctx->rsp += 8;
+  }
+
+  inline void eval(std::shared_ptr<ASTExpr> expr, std::string reg, std::string &code) {
+    if (expr->is_assignable) code += "mov " + reg + ", [" + reg + "]\n";
   }
 
   bool type_eq(std::shared_ptr<EvalType> x, std::shared_ptr<EvalType> y) {
@@ -47,14 +65,15 @@ namespace generator {
     return true;
   }
 
-  bool try_assign(std::shared_ptr<ASTExpr> l, std::shared_ptr<ASTExpr> r, std::string &code) {
+  bool try_assign(std::shared_ptr<ASTExpr> l, std::shared_ptr<ASTExpr> r,
+                  std::shared_ptr<Context> ctx, std::string &code) {
     if (!l->is_assignable) return false;
     if (!type_eq(l->eval_type, r->eval_type)) return false;
-    code += "pop r10\n";
-    code += "pop r11\n";
+    pop("r10", ctx, code);
+    pop("r11", ctx, code);
     if (typeid(*l->eval_type) == typeid(TypeArray)) {
       int size = std::dynamic_pointer_cast<TypeArray>(l->eval_type)->size;
-      code += "push r11\n";
+      push("r11", ctx, code);
       for (int i = 0; i < align_8(size) / 8; i++) {
         code += "mov r12, [r11]\n";
         code += "mov [r10], r12\n";
@@ -63,9 +82,9 @@ namespace generator {
       }
       return true;
     }
-    if (r->is_assignable) code += "mov r11 [r11]\n";
+    eval(r, "r11", code);
     code += "mov [r10], r11\n";
-    code += "push r11\n";
+    push("r11", ctx, code);
     return true;
   }
 
@@ -143,13 +162,8 @@ namespace generator {
       std::shared_ptr<ASTFuncDeclaration> fd = n->declaration;
       std::string func_name = std::string(fd->declarator->declarator->op->sv);
       std::shared_ptr<TypeFunc> tf = create_func_type(fd);
-      std::vector<std::string> name_args;
       if (fd->declarator->args.size() > 6) {
-        // TODO: the maximum number of arguments of function is 6 in l4t
         assert(false);
-      }
-      for (std::shared_ptr<ASTSimpleDeclaration> d: fd->declarator->args) {
-        name_args.push_back(std::string(d->declarator->op->sv));
       }
       ctx->add_func(func_name, tf);
       code += ".global " + func_name + "\n";
@@ -158,16 +172,18 @@ namespace generator {
       code += "mov rbp, rsp\n";
       ctx->rsp = 0; // now rsp == rbp
       ctx->start_scope();
-      // push arguments
-      for (int i=0; i < (int)name_args.size(); i++) {
+      for (int i=0; i < (int)tf->type_args.size(); i++) {
         push_args(i, tf->type_args[i], ctx, code);
-        ctx->add_local_var(name_args[i], tf->type_args[i]);
+        ctx->add_local_var(
+          std::string(fd->declarator->args[i]->declarator->op->sv),
+          tf->type_args[i]
+        );
       }
       generate_text_section(n->body, ctx, code);
       ctx->end_scope();
       code += "mov rsp, rbp\n";
       code += "pop rbp\n";
-      code += "ret\n"; // default return
+      code += "ret\n";
       return;
     }
     if (typeid(*ast) == typeid(ASTDeclaration)) {
@@ -182,39 +198,45 @@ namespace generator {
     }
     if (typeid(*ast) == typeid(ASTIfStmt)) {
       std::shared_ptr<ASTIfStmt> n = std::dynamic_pointer_cast<ASTIfStmt>(ast);
-      int false_label = label_number++;
-      int end_label = label_number++;
+      std::string false_label = get_label();
+      std::string end_label = get_label();
       generate_text_section(n->cond, ctx, code);
+      if (typeid(*n->cond->eval_type) == typeid(TypeArray)) {
+        assert(false);
+      }
       ctx->rsp += 8;
       code += "pop r10\n";
-      if (n->cond->is_assignable) code += "mov r10, [r10]\n";
+      eval(n->cond, "r10", code);
       code += "cmp r10, 0\n";
       code += "setnz r10b\n";
-      code += "jz L" + std::to_string(false_label) + "\n";
+      code += "jz " + false_label + "\n";
       generate_text_section(n->true_stmt, ctx, code);
-      code += "jmp L" + std::to_string(end_label) + "\n";
-      code += "L" + std::to_string(false_label) + ":\n";
+      code += "jmp " + end_label + "\n";
+      code += false_label + ":\n";
       if (n->false_stmt) generate_text_section(n->false_stmt, ctx, code);
-      code += "L" + std::to_string(end_label) + ":\n";
+      code += end_label + ":\n";
     }
     if (typeid(*ast) == typeid(ASTElseStmt)) {
       std::shared_ptr<ASTElseStmt> n = std::dynamic_pointer_cast<ASTElseStmt>(ast);
-      int false_label = label_number++;
-      int end_label = label_number++;
+      std::string false_label = get_label();
+      std::string end_label = get_label();
       if (n->cond) {
         generate_text_section(n->cond, ctx, code);
+        if (typeid(*n->cond->eval_type) == typeid(TypeArray)) {
+          assert(false);
+        }
         ctx->rsp += 8;
         code += "pop r10\n";
-        if (n->cond->is_assignable) code += "mov r10, [r10]\n";
+        eval(n->cond, "r10", code);
         code += "cmp r10, 0\n";
         code += "setnz r10b\n";
-        code += "jz L" + std::to_string(false_label) + "\n";
+        code += "jz " + false_label + "\n";
       }
       generate_text_section(n->true_stmt, ctx, code);
-      code += "jmp L" + std::to_string(end_label) + "\n";
-      code += "L" + std::to_string(false_label) + ":\n";
+      code += "jmp " + end_label + "\n";
+      code += false_label + ":\n";
       if (n->false_stmt) generate_text_section(n->false_stmt, ctx, code);
-      code += "L" + std::to_string(end_label) + ":\n";
+      code += end_label + ":\n";
     }
     if (typeid(*ast) == typeid(ASTCompoundStmt)) {
       std::shared_ptr<ASTCompoundStmt> n = std::dynamic_pointer_cast<ASTCompoundStmt>(ast);
@@ -235,17 +257,15 @@ namespace generator {
     if (typeid(*ast) == typeid(ASTExprStmt)) {
       std::shared_ptr<ASTExprStmt> n = std::dynamic_pointer_cast<ASTExprStmt>(ast);
       generate_text_section(n->expr, ctx, code);
-      ctx->rsp += 8;
-      code += "pop r10\n"; // pop the value that need not be evaluate
+      pop("r10", ctx, code);
       return;
     }
     if (typeid(*ast) == typeid(ASTReturnStmt)) {
       std::shared_ptr<ASTReturnStmt> n = std::dynamic_pointer_cast<ASTReturnStmt>(ast);
       std::shared_ptr<ASTExpr> expr = std::dynamic_pointer_cast<ASTExpr>(n->expr);
       generate_text_section(expr, ctx, code);
-      ctx->rsp += 8;
-      code += "pop rax\n"; // set return value
-      if (expr->is_assignable) code += "mov rax, [rax]\n";
+      pop("rax", ctx, code);
+      eval(expr, "rax", code);
       code += "mov rsp, rbp\n";
       code += "pop rbp\n";
       code += "ret\n";
@@ -275,11 +295,10 @@ namespace generator {
       std::shared_ptr<ASTAssignExpr> n = std::dynamic_pointer_cast<ASTAssignExpr>(ast);
       generate_text_section(n->right, ctx, code);
       generate_text_section(n->left, ctx, code);
-      if (!try_assign(n->left, n->right, code)) {
+      if (!try_assign(n->left, n->right, ctx, code)) {
         assert(false);
       }
 
-      ctx->rsp += 8; // 2 pop 1 push
       n->eval_type = n->left->eval_type;
       n->is_assignable = false;
       return;
@@ -304,14 +323,13 @@ namespace generator {
         // TODO error
         assert(false);
       }
-      code += "pop r11\n";
-      code += "pop r10\n";
-      if (n->left->is_assignable) code += "mov r10, [r10]\n";
-      if (n->right->is_assignable) code += "mov r11, [r11]\n";
+      pop("r11", ctx, code);
+      pop("r10", ctx, code);
+      eval(n->left, "r10", code);
+      eval(n->right, "r11", code);
       if (n->op->sv == "+") code += "add r10, r11\n";
       else code += "sub r10, r11\n";
-      code += "push r10\n";
-      ctx->rsp += 8; // 2 pop and 1 push
+      push("r10", ctx, code);
       n->eval_type = n->left->eval_type;
       n->is_assignable = false;
       return;
@@ -328,14 +346,13 @@ namespace generator {
         // TODO error
         assert(false);
       }
-      code += "pop r11\n";
-      code += "pop r10\n";
-      if (n->left->is_assignable) code += "mov r10, [r10]\n";
-      if (n->right->is_assignable) code += "mov r11, [r11]\n";
+      pop("r11", ctx, code);
+      pop("r10", ctx, code);
+      eval(n->left, "r10", code);
+      eval(n->right, "r11", code);
       if (n->op->sv == "*") code += "imul r10, r11\n";
       else code += "idiv r10, r11\n";
-      code += "push r10\n";
-      ctx->rsp += 8; // 2 pop and 1 push
+      push("r10", ctx, code);
       n->eval_type = n->left->eval_type;
       n->is_assignable = false;
       return;
@@ -344,22 +361,22 @@ namespace generator {
       std::shared_ptr<ASTUnaryExpr> n = std::dynamic_pointer_cast<ASTUnaryExpr>(ast);
       generate_text_section(n->expr, ctx, code);
       if (n->op->sv == "*") {
-        if (n->expr->is_assignable == false) {
+        if (!n->expr->is_assignable) {
           assert(false);
         }
         if (typeid(*n->expr->eval_type) != typeid(TypePtr)) {
           assert(false);
         }
-        code += "pop r10\n";
-        code += "mov r10, [r10]\n";
-        code += "push r10\n";
+        pop("r10", ctx, code);
+        eval(n->expr, "r10", code);
+        push("r10", ctx, code);
         std::shared_ptr<TypePtr> expr_type = std::dynamic_pointer_cast<TypePtr>(n->expr->eval_type);
         n->eval_type = expr_type->of;
         n->is_assignable = true;
         return;
       }
       if (n->op->sv == "&") {
-        if (n->expr->is_assignable == false) {
+        if (!n->expr->is_assignable) {
           assert(false);
         }
         n->eval_type = std::make_shared<TypePtr>(n->expr->eval_type);
@@ -400,14 +417,13 @@ namespace generator {
         }
       }
       code += "pop rax\n";
-      if (n->primary->is_assignable) code += "mov rax, [rax]\n";
+      eval(n->primary, "rax", code);
       ctx->rsp += ((int)n->args.size() + 1) << 3;
       // rsp needs to be aligned when call
       if (!is_aligned_16(ctx->rsp)) code += "sub rsp, 8\n";
       code += "call rax\n";
       if (!is_aligned_16(ctx->rsp)) code += "add rsp, 8\n";
-      ctx->rsp -= 8;
-      code += "push rax\n";
+      push("rax", ctx, code);
       n->eval_type = tf->ret_type;
       n->is_assignable = false;
       return;
@@ -425,8 +441,7 @@ namespace generator {
         std::shared_ptr<LocalVar> lv = ctx->get_local_var(n->op->sv);
         if (lv) {
           code += "lea r10, [rbp - " + std::to_string(lv->offset) + "]\n";
-          code += "push r10\n";
-          ctx->rsp -= 8;
+          push("r10", ctx, code);
           n->eval_type = lv->type;
           n->is_assignable = true;
           return;
@@ -435,8 +450,7 @@ namespace generator {
         if (gv) {
           code += ".global " + gv->name + "\n";
           code += "mov r10, [rip + " + gv->name + "@GOTPCREL]\n";
-          code += "push r10\n";
-          ctx->rsp -= 8;
+          push("r10", ctx, code);
           n->eval_type = gv->type;
           n->is_assignable = true;
           return;
@@ -445,8 +459,7 @@ namespace generator {
         if (f) {
           code += ".global " + f->name + "\n";
           code += "mov r10, [rip + " + f->name + "@GOTPCREL]\n";
-          code += "push r10\n";
-          ctx->rsp -= 8;
+          push("r10", ctx, code);
           n->eval_type = f->type;
           n->is_assignable = false;
           return;
@@ -454,23 +467,20 @@ namespace generator {
         // TODO get extern
         code += ".global " + std::string(n->op->sv) + "\n";
         code += "mov r10, [rip + " + std::string(n->op->sv) + "@GOTPCREL]\n";
-        code += "push r10\n";
-        ctx->rsp -= 8;
+        push("r10", ctx, code);
         n->eval_type = std::make_shared<TypeFunc>(std::make_shared<TypeAny>());
         n->is_assignable = false;
         return;
       } else if (n->op->type == NumberConstant) {
         code += "mov r10, " + std::string(n->op->sv) + "\n";
-        code += "push r10\n";
-        ctx->rsp -= 8;
+        push("r10", ctx, code);
         n->eval_type = std::make_shared<TypeNum>();
         n->is_assignable = false;
         return;
       } else if (n->op->type == StringLiteral) {
-        std::string label = "L" + std::to_string(label_number++);
+        std::string label = get_label();
         code += "lea r10, [rip + " + label + "]\n";
-        code += "push r10\n";
-        ctx->rsp -= 8;
+        push("r10", ctx, code);
         ctx->add_str(label, n->op->sv);
         n->eval_type = std::make_shared<TypeArray>(
           std::make_shared<TypeChar>(), string_literal_length(n->op->sv)
@@ -487,6 +497,16 @@ namespace generator {
     for (std::pair<std::string, std::string> &d: ctx->strs) {
       code += ".align 8\n";
       code += d.first + ": .asciz " + d.second + "\n";
+    }
+    for (auto &p: ctx->global_vars) {
+      code += ".align 8\n";
+      code += ".global " + p.first + "\n";
+      code += p.first + ":\n";
+      code += ".byte ";
+      for (int i = 0; i < p.second->type->size; i++) {
+        code += "0";
+        code += ((i == p.second->type->size - 1) ? "\n" : ", ");
+      }
     }
   }
 
