@@ -8,7 +8,7 @@ if [ $? -gt 0 ]; then
   exit 1
 fi
 rm -f $1.S
-cat main.lup | ./lupc 1> $1.S
+cat main.l4t | ./l4tc 1> $1.S
 if [ $? -gt 0 ]; then
   exit 1
 fi

@@ -145,7 +145,7 @@ namespace generator {
       std::shared_ptr<TypeFunc> tf = create_func_type(fd);
       std::vector<std::string> name_args;
       if (fd->declarator->args.size() > 6) {
-        // TODO: the maximum number of arguments of function is 6 in lup
+        // TODO: the maximum number of arguments of function is 6 in l4t
         assert(false);
       }
       for (std::shared_ptr<ASTSimpleDeclaration> d: fd->declarator->args) {

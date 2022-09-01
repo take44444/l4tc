@@ -1,5 +1,5 @@
-# Lup Compiler
-The compiler for Lup, which is the original programming language.
+# L4T Compiler
+The compiler for L4T, which is the original programming language.
 
 ## Abstract
 ### Variable

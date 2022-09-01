@@ -99,6 +99,43 @@ sub rsp, 8
 sub rsp, 8
 sub rsp, 8
 sub rsp, 8
+mov r10, 0
+push r10
+lea r10, [rbp - 8]
+push r10
+pop r10
+pop r11
+mov [r10], r11
+push r11
+pop r10
+lea r10, [rbp - 8]
+push r10
+lea r10, [rbp - 16]
+push r10
+pop r10
+pop r11
+mov [r10], r11
+push r11
+pop r10
+.global f
+mov r10, [rip + f@GOTPCREL]
+push r10
+lea r10, [rbp - 24]
+push r10
+pop r10
+pop r11
+mov [r10], r11
+push r11
+pop r10
+lea r10, [rbp - 24]
+push r10
+lea r10, [rbp - 32]
+push r10
+pop r10
+pop r11
+mov [r10], r11
+push r11
+pop r10
 sub rsp, 16
 sub rsp, 8
 sub rsp, 8
@@ -151,43 +188,6 @@ call rax
 push rax
 pop r10
 lea rsp, [rbp - 32]
-mov r10, 0
-push r10
-lea r10, [rbp - 8]
-push r10
-pop r10
-pop r11
-mov [r10], r11
-push r11
-pop r10
-lea r10, [rbp - 8]
-push r10
-lea r10, [rbp - 16]
-push r10
-pop r10
-pop r11
-mov [r10], r11
-push r11
-pop r10
-.global f
-mov r10, [rip + f@GOTPCREL]
-push r10
-lea r10, [rbp - 24]
-push r10
-pop r10
-pop r11
-mov [r10], r11
-push r11
-pop r10
-lea r10, [rbp - 24]
-push r10
-lea r10, [rbp - 32]
-push r10
-pop r10
-pop r11
-mov [r10], r11
-push r11
-pop r10
 .global printf
 mov r10, [rip + printf@GOTPCREL]
 push r10

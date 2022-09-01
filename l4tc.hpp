@@ -1,5 +1,5 @@
-#ifndef LUPC_HPP
-#define LUPC_HPP
+#ifndef L4TC_HPP
+#define L4TC_HPP
 
 #include "./tokenizer/tokenizer.hpp"
 #include "./parser/parser.hpp"
