@@ -7,6 +7,8 @@
 namespace generator {
   using namespace tokenizer;
   using namespace parser;
+  const std::string param_reg_names[6] = {"rdi", "rsi", "rdx", "rcx", "r8",  "r9"};
+
   class EvalType {
     public:
     int size;
@@ -85,6 +87,13 @@ namespace generator {
     GlobalVar(std::string n, std::shared_ptr<EvalType> t) : name(n), type(t) {}
   };
 
+  class Func {
+    public:
+    std::string name;
+    std::shared_ptr<EvalType> type;
+    Func(std::string n, std::shared_ptr<EvalType> t) : name(n), type(t) {}
+  };
+
   class LocalVar {
     public:
     int offset;
@@ -98,13 +107,13 @@ namespace generator {
     // std::vector<int> saved_rsp;
     std::vector<std::map<std::string, std::shared_ptr<LocalVar>>> scopes_local_vars;
     std::map<std::string, std::shared_ptr<GlobalVar>> global_vars;
-    std::map<std::string, std::shared_ptr<GlobalVar>> funcs;
+    std::map<std::string, std::shared_ptr<Func>> funcs;
     std::vector<std::pair<std::string, std::string>> strs;
 
     Context() : rsp(0) {}
 
     void add_func(std::string key, std::shared_ptr<EvalType> type) {
-      funcs.insert({key, std::make_shared<GlobalVar>(key, type)});
+      funcs.insert({key, std::make_shared<Func>(key, type)});
     }
 
     void add_global_var(std::string key, std::shared_ptr<EvalType> type) {
@@ -121,7 +130,7 @@ namespace generator {
       strs.push_back({label, std::string(data)});
     }
 
-    std::shared_ptr<GlobalVar> get_func(std::string_view key) {
+    std::shared_ptr<Func> get_func(std::string_view key) {
       auto it = funcs.find(std::string(key));
       if (it == funcs.end()) return nullptr;
       return it->second;
@@ -164,6 +173,25 @@ namespace generator {
     //   return !(rsp & 0xF);
     // }
   };
+  std::string create_label();
+  void get_func_addr(std::string reg, std::shared_ptr<Func> f, std::string &code);
+  void get_global_var_addr(std::string reg, std::shared_ptr<GlobalVar> gv, std::string &code);
+  void get_str_addr(std::string reg, std::string &label, std::string &code);
+  void get_local_var_addr(std::string reg, std::shared_ptr<LocalVar> lv, std::string &code);
+  void lea_label(std::string reg, std::string label, std::string &code);
+  void push(std::string reg, std::shared_ptr<Context> ctx, std::string &code);
+  void pop(std::string reg, std::shared_ptr<Context> ctx, std::string &code);
+  void ret(std::string &code);
+  bool type_eq(std::shared_ptr<EvalType> x, std::shared_ptr<EvalType> y);
+  bool try_assign(std::shared_ptr<ASTExpr> l, std::shared_ptr<ASTExpr> r,
+                  std::shared_ptr<Context> ctx, std::string &code);
+  void push_args(int i, std::shared_ptr<EvalType> type, std::shared_ptr<Context> ctx, std::string &code);
+  std::shared_ptr<EvalType> create_type(std::shared_ptr<ASTTypeSpec> n);
+  std::shared_ptr<TypeFunc> create_func_type(std::shared_ptr<ASTFuncDeclaration> fd);
+  int string_literal_length(std::string_view sl);
+  bool is_aligned_16(int x);
+  int align_8(int x);
+  void eval(std::shared_ptr<ASTExpr> expr, std::string reg, std::string &code);
   std::string generate(std::shared_ptr<AST> ast);
 }
 #endif

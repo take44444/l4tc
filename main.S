@@ -103,7 +103,7 @@ sub rsp, 8
 .global g1
 mov r10, [rip + g1@GOTPCREL]
 push r10
-lea r10, [rbp - 40]
+lea r10, [rbp - 8]
 push r10
 pop r10
 pop r11
@@ -132,16 +132,16 @@ push r11
 pop r10
 mov r10, 0
 push r10
-lea r10, [rbp - 8]
+lea r10, [rbp - 16]
 push r10
 pop r10
 pop r11
 mov [r10], r11
 push r11
 pop r10
-lea r10, [rbp - 8]
-push r10
 lea r10, [rbp - 16]
+push r10
+lea r10, [rbp - 24]
 push r10
 pop r10
 pop r11
@@ -151,16 +151,16 @@ pop r10
 .global f
 mov r10, [rip + f@GOTPCREL]
 push r10
-lea r10, [rbp - 24]
+lea r10, [rbp - 32]
 push r10
 pop r10
 pop r11
 mov [r10], r11
 push r11
 pop r10
-lea r10, [rbp - 24]
-push r10
 lea r10, [rbp - 32]
+push r10
+lea r10, [rbp - 40]
 push r10
 pop r10
 pop r11
@@ -226,12 +226,12 @@ mov r10, [rip + printf@GOTPCREL]
 push r10
 lea r10, [rip + L5]
 push r10
-lea r10, [rbp - 32]
+lea r10, [rbp - 40]
 push r10
 pop r10
 mov r10, [r10]
 push r10
-lea r10, [rbp - 16]
+lea r10, [rbp - 24]
 push r10
 pop r10
 mov r10, [r10]
@@ -244,7 +244,7 @@ sub rsp, 8
 call rax
 add rsp, 8
 push rax
-lea r10, [rbp - 40]
+lea r10, [rbp - 8]
 push r10
 pop r10
 mov r10, [r10]
@@ -257,9 +257,7 @@ mov rsi, [rsi]
 pop rdi
 mov rdi, [rdi]
 pop rax
-sub rsp, 8
 call rax
-add rsp, 8
 push rax
 pop rsi
 pop rdi
@@ -269,7 +267,7 @@ call rax
 add rsp, 8
 push rax
 pop r10
-lea r10, [rbp - 16]
+lea r10, [rbp - 24]
 push r10
 pop r10
 mov r10, [r10]
@@ -281,7 +279,7 @@ pop r10
 mov r10, [r10]
 add r10, r11
 push r10
-lea r10, [rbp - 16]
+lea r10, [rbp - 24]
 push r10
 pop r10
 mov r10, [r10]
@@ -296,12 +294,12 @@ mov r10, [rip + printf@GOTPCREL]
 push r10
 lea r10, [rip + L6]
 push r10
-lea r10, [rbp - 32]
+lea r10, [rbp - 40]
 push r10
 pop r10
 mov r10, [r10]
 push r10
-lea r10, [rbp - 8]
+lea r10, [rbp - 16]
 push r10
 pop rdi
 mov rdi, [rdi]
@@ -322,9 +320,7 @@ mov rsi, [rsi]
 pop rdi
 mov rdi, [rdi]
 pop rax
-sub rsp, 8
 call rax
-add rsp, 8
 push rax
 pop rsi
 pop rdi
