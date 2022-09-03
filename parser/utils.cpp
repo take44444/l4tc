@@ -1,15 +1,6 @@
 #include "./parser.hpp"
 
 namespace parser {
-  bool is_unary_expr(std::shared_ptr<AST> node) {
-    return (
-      typeid(*node) == typeid(ASTSimpleExpr) ||
-      typeid(*node) == typeid(ASTPrimaryExpr) ||
-      typeid(*node) == typeid(ASTFuncCallExpr) ||
-      typeid(*node) == typeid(ASTUnaryExpr)
-    );
-  }
-
   tokenizer::Token *expect_token_with_str(tokenizer::Token **next, Error &err, std::string str) {
     if (!*next) {
       err = Error(str, "EOF", *next);
@@ -95,6 +86,15 @@ namespace parser {
     if (typeid(*n) == typeid(ASTPrimaryExpr)) {
       std::shared_ptr<ASTPrimaryExpr> nn = std::dynamic_pointer_cast<ASTPrimaryExpr>(n);
       std::cerr << "PrimaryExpr(e=";
+      print_ast_sub(nn->expr, depth);
+      std::cerr << ')';
+      return;
+    }
+    if (typeid(*n) == typeid(ASTArrayAccessExpr)) {
+      std::shared_ptr<ASTArrayAccessExpr> nn = std::dynamic_pointer_cast<ASTArrayAccessExpr>(n);
+      std::cerr << "ArrayAccessExpr(p=";
+      print_ast_sub(nn->primary, depth);
+      std::cerr << ", e=";
       print_ast_sub(nn->expr, depth);
       std::cerr << ')';
       return;

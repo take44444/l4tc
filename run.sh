@@ -3,7 +3,7 @@ if [ $# -lt 1 ]; then
   echo 'need argument' >&2
   exit 1
 fi
-make
+make 1> /dev/null
 if [ $? -gt 0 ]; then
   exit 1
 fi

@@ -271,21 +271,38 @@ namespace generator {
       }
       for (int i=(int)n->args.size()-1; i >= 0; i--) {
         pop(param_reg_names[i], ctx, code);
-        if (n->args[i]->is_assignable &&
-            typeid(*n->args[i]->eval_type) != typeid(TypeArray)) {
-          code += "mov " + param_reg_names[i] + ", [" + param_reg_names[i] +"]\n";
+        if (typeid(*n->args[i]->eval_type) != typeid(TypeArray)) {
+          eval(n->args[i], param_reg_names[i], code);
         }
       }
       pop("rax", ctx, code);
       eval(n->primary, "rax", code);
-      ctx->rsp += ((int)n->args.size() + 1) << 3;
-      // rsp needs to be aligned when call
-      if (!is_aligned_16(ctx->rsp)) code += "sub rsp, 8\n";
-      code += "call rax\n";
-      if (!is_aligned_16(ctx->rsp)) code += "add rsp, 8\n";
+      call("rax", ctx, code);
       push("rax", ctx, code);
       n->eval_type = tf->ret_type;
       n->is_assignable = false;
+      return;
+    }
+    if (typeid(*ast) == typeid(ASTArrayAccessExpr)) {
+      std::shared_ptr<ASTArrayAccessExpr> n = std::dynamic_pointer_cast<ASTArrayAccessExpr>(ast);
+      generate_text_section(n->primary, ctx, code);
+      if (typeid(*n->primary->eval_type) != typeid(TypeArray)) {
+        // TODO error
+        assert(false);
+      }
+      std::shared_ptr<TypeArray> a = std::dynamic_pointer_cast<TypeArray>(n->primary->eval_type);
+      generate_text_section(n->expr, ctx, code);
+      if (typeid(*n->expr->eval_type) != typeid(TypeNum)) {
+        assert(false);
+      }
+      pop("r11", ctx, code);
+      eval(n->expr, "r11", code);
+      code += "imul r11, " + std::to_string(a->of->size) + "\n";
+      pop("r10", ctx, code);
+      code += "add r10, r11\n";
+      push("r10", ctx, code);
+      n->eval_type = a->of;
+      n->is_assignable = true;
       return;
     }
     if (typeid(*ast) == typeid(ASTPrimaryExpr)) {

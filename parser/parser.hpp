@@ -86,6 +86,13 @@ namespace parser {
     }
   };
 
+  class ASTArrayAccessExpr : public ASTExpr {
+    public:
+    std::shared_ptr<ASTExpr> primary;
+    std::shared_ptr<ASTExpr> expr;
+    ASTArrayAccessExpr() : ASTExpr() {}
+  };
+
   class ASTMultiplicativeExpr : public ASTExpr {
     public:
     Token *op;
@@ -253,8 +260,6 @@ namespace parser {
       external_declarations = std::vector<std::shared_ptr<AST>>();
     }
   };
-
-  bool is_unary_expr(std::shared_ptr<AST> node);
 
   // parser.cpp
   std::shared_ptr<ASTTranslationUnit> parse(Token **head, Error &err);

@@ -49,6 +49,7 @@ namespace parser {
   }
 
   std::shared_ptr<ASTTypeSpec> parse_declaration_spec(Token **next, Error &err) {
+    // TODO static
     return parse_type_spec(next, err);
   }
 
@@ -69,29 +70,37 @@ namespace parser {
   }
 
   std::shared_ptr<ASTExpr> parse_assign_expr(Token **next, Error &err);
+
   std::shared_ptr<ASTExpr> parse_postfix_expr(Token **next, Error &err) {
-  // function-call
-  // array
-  // increment
-  // decrement
   // ->
   // .
-    std::shared_ptr<ASTExpr> primary = parse_primary_expr(next, err);
-    if (!primary) return nullptr;
-    // if "(" is not here, it is not function-call
-    // but it is correct primary expr
-    if (!expect_token_with_str(next, err, "(")) return primary;
-    // now it is function-call-expr
-    std::shared_ptr<ASTFuncCallExpr> ret = std::make_shared<ASTFuncCallExpr>();
-    ret->primary = primary;
-
-    std::shared_ptr<ASTExpr> arg;
-    while (!expect_token_with_str(next, err, ")")) {
-      if (!(arg = parse_assign_expr(next, err))) return nullptr;
-      ret->args.push_back(arg);
-      if (expect_token_with_str(next, err, ",")) continue;
-      // end
-      if (!expect_token_with_str(next, err, ")")) return nullptr;
+    std::shared_ptr<ASTExpr> ret = parse_primary_expr(next, err);
+    while (ret) {
+      if (expect_token_with_str(next, err, "(")) {
+        // now it is function-call-expr
+        std::shared_ptr<ASTFuncCallExpr> fc = std::make_shared<ASTFuncCallExpr>();
+        fc->primary = ret;
+        std::shared_ptr<ASTExpr> arg;
+        while (!expect_token_with_str(next, err, ")")) {
+          if (!(arg = parse_assign_expr(next, err))) return nullptr;
+          fc->args.push_back(arg);
+          if (expect_token_with_str(next, err, ",")) continue;
+          // end
+          if (!expect_token_with_str(next, err, ")")) return nullptr;
+          break;
+        }
+        ret = fc;
+        continue;
+      }
+      if (expect_token_with_str(next, err, "[")) {
+        // now it is array-access-expr
+        std::shared_ptr<ASTArrayAccessExpr> aa = std::make_shared<ASTArrayAccessExpr>();
+        aa->primary = ret;
+        aa->expr = parse_expr(next, err);
+        ret = aa;
+        if (!expect_token_with_str(next, err, "]")) return nullptr;
+        continue;
+      }
       break;
     }
     return ret;
@@ -246,9 +255,6 @@ namespace parser {
     std::shared_ptr<ASTExpr> left = parse_logical_or_expr(next, err);
     // parse error
     if (!left) return nullptr;
-    // if it is not unary-expr, it can't be left of assignment-expr
-    // but it is correct expr
-    if (!is_unary_expr(left)) return left;
     // if ":" is not here, it is not assignment-expr
     // but it is correct expr
     if (!expect_token_with_str(next, err, ":")) return left;

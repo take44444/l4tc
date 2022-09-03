@@ -1,9 +1,31 @@
 #include "./generator.hpp"
 
 namespace generator {
+  int string_literal_length(std::string_view sl) {
+    int ret = sl.length() - 2 + 1;
+    for (char c: sl) if (c == '\\') ret--;
+    return ret;
+  }
+
+  bool is_aligned_16(int x) {
+    return !(x & 0xF);
+  }
+
+  int align_8(int x) {
+    return ((x + 7) >> 3) << 3;
+  }
+
+  void eval(std::shared_ptr<ASTExpr> expr, std::string reg, std::string &code) {
+    if (expr->is_assignable) code += "mov " + reg + ", [" + reg + "]\n";
+  }
+
   std::string create_label() {
     static int label_number = 0;
     return "L" + std::to_string(label_number++);
+  }
+
+  void derefer(std::string reg, std::string &code) {
+    code += "mov " + reg + ", [" + reg +"]\n";
   }
 
   void get_func_addr(std::string reg, std::shared_ptr<Func> f, std::string &code) {
@@ -32,6 +54,12 @@ namespace generator {
   void pop(std::string reg, std::shared_ptr<Context> ctx, std::string &code) {
     code += "pop " + reg + "\n";
     ctx->rsp += 8;
+  }
+
+  void call(std::string reg, std::shared_ptr<Context> ctx, std::string &code) {
+    if (!is_aligned_16(ctx->rsp)) code += "sub rsp, 8\n";
+    code += "call " + reg + "\n";
+    if (!is_aligned_16(ctx->rsp)) code += "add rsp, 8\n";
   }
 
   void ret(std::string &code) {
@@ -140,23 +168,5 @@ namespace generator {
       type_args.push_back(create_type(d->type_spec));
     }
     return std::make_shared<TypeFunc>(type_args, create_type(fd->type_spec));
-  }
-
-  int string_literal_length(std::string_view sl) {
-    int ret = sl.length() - 2 + 1;
-    for (char c: sl) if (c == '\\') ret--;
-    return ret;
-  }
-
-  bool is_aligned_16(int x) {
-    return !(x & 0xF);
-  }
-
-  int align_8(int x) {
-    return ((x + 7) >> 3) << 3;
-  }
-
-  void eval(std::shared_ptr<ASTExpr> expr, std::string reg, std::string &code) {
-    if (expr->is_assignable) code += "mov " + reg + ", [" + reg + "]\n";
   }
 }

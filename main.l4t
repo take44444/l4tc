@@ -1,42 +1,6 @@
-num g1, g2
-
-func add(num x, num y) -> num
-  return x + y
-
-func sub(num x, num y) -> num
-  return x - y
-
-func f(num x) -> funcptr (num, num) -> num
-  if x
-    return sub
-  else
-    return add
 
 func main() -> num
-  ptr<num> g1p
-  num a
-  ptr<num> p
-  funcptr (num) -> funcptr (num, num) -> num fp
-  ptr<funcptr (num) -> funcptr (num, num) -> num> fpp
-
-  g1p: &g1
-  g1: 100
-  g2: 200
-  a: 0
-  p: &a
-  fp: f
-  fpp: &fp
-
-    array<char>[15] s
-    ptr<array<char>[15]> sp
-    ptr<ptr<array<char>[15]>> spp
-    spp: &sp
-    sp: &s
-    s: "Hello, World!\n"
-    printf(*spp)
-
-  printf(&"%d\n", ((*fpp)(*p))(*g1p, g2))
-  *p: *p + 1
-  printf(&"%d\n", ((*fpp)(a))(g1, g2))
-
+  array<array<num>[3]>[5] a
+  a[3][2]: 10
+  printf("%d\n", a[3][2])
   return 0

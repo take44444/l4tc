@@ -173,7 +173,12 @@ namespace generator {
     //   return !(rsp & 0xF);
     // }
   };
+  int string_literal_length(std::string_view sl);
+  bool is_aligned_16(int x);
+  int align_8(int x);
+  void eval(std::shared_ptr<ASTExpr> expr, std::string reg, std::string &code);
   std::string create_label();
+  void derefer(std::string reg, std::string &code);
   void get_func_addr(std::string reg, std::shared_ptr<Func> f, std::string &code);
   void get_global_var_addr(std::string reg, std::shared_ptr<GlobalVar> gv, std::string &code);
   void get_str_addr(std::string reg, std::string &label, std::string &code);
@@ -181,6 +186,7 @@ namespace generator {
   void lea_label(std::string reg, std::string label, std::string &code);
   void push(std::string reg, std::shared_ptr<Context> ctx, std::string &code);
   void pop(std::string reg, std::shared_ptr<Context> ctx, std::string &code);
+  void call(std::string reg, std::shared_ptr<Context> ctx, std::string &code);
   void ret(std::string &code);
   bool type_eq(std::shared_ptr<EvalType> x, std::shared_ptr<EvalType> y);
   bool try_assign(std::shared_ptr<ASTExpr> l, std::shared_ptr<ASTExpr> r,
@@ -188,10 +194,6 @@ namespace generator {
   void push_args(int i, std::shared_ptr<EvalType> type, std::shared_ptr<Context> ctx, std::string &code);
   std::shared_ptr<EvalType> create_type(std::shared_ptr<ASTTypeSpec> n);
   std::shared_ptr<TypeFunc> create_func_type(std::shared_ptr<ASTFuncDeclaration> fd);
-  int string_literal_length(std::string_view sl);
-  bool is_aligned_16(int x);
-  int align_8(int x);
-  void eval(std::shared_ptr<ASTExpr> expr, std::string reg, std::string &code);
   std::string generate(std::shared_ptr<AST> ast);
 }
 #endif
