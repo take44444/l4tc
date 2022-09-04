@@ -15,17 +15,32 @@ namespace generator {
     // declaration-spec simple-declarators
     if (typeid(*ast) == typeid(ASTExternalDeclaration)) {
       std::shared_ptr<ASTExternalDeclaration> n = std::dynamic_pointer_cast<ASTExternalDeclaration>(ast);
-      std::shared_ptr<EvalType> type = create_type(n->declaration_spec);
+      std::shared_ptr<EvalType> type = ctx->create_type(n->declaration_spec);
+      if (!type) {
+        assert(false);
+      }
       for (std::shared_ptr<ASTDeclarator> d: n->declarators) {
         ctx->add_global_var(std::string(d->op->sv), type);
       }
+      return;
+    }
+    if (typeid(*ast) == typeid(ASTStructDef)) {
+      std::shared_ptr<ASTStructDef> n = std::dynamic_pointer_cast<ASTStructDef>(ast);
+      std::shared_ptr<TypeStruct> ts = ctx->create_struct_type(n);
+      if (!ts) {
+        assert(false);
+      }
+      ctx->add_struct(n->declarator->op->sv, ts);
       return;
     }
     if (typeid(*ast) == typeid(ASTFuncDef)) {
       std::shared_ptr<ASTFuncDef> n = std::dynamic_pointer_cast<ASTFuncDef>(ast);
       std::shared_ptr<ASTFuncDeclaration> fd = n->declaration;
       std::string func_name = std::string(fd->declarator->declarator->op->sv);
-      std::shared_ptr<TypeFunc> tf = create_func_type(fd);
+      std::shared_ptr<TypeFunc> tf = ctx->create_func_type(fd);
+      if (!tf) {
+        assert(false);
+      }
       if (fd->declarator->args.size() > 6) {
         assert(false);
       }
@@ -50,7 +65,10 @@ namespace generator {
     }
     if (typeid(*ast) == typeid(ASTDeclaration)) {
       std::shared_ptr<ASTDeclaration> n = std::dynamic_pointer_cast<ASTDeclaration>(ast);
-      std::shared_ptr<EvalType> type = create_type(n->declaration_spec);
+      std::shared_ptr<EvalType> type = ctx->create_type(n->declaration_spec);
+      if (!type) {
+        assert(false);
+      }
       for (std::shared_ptr<ASTDeclarator> d: n->declarators) {
         code += "sub rsp, " + std::to_string(align_8(type->size)) + "\n";
         ctx->rsp -= align_8(type->size);

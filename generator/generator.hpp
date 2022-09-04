@@ -46,6 +46,24 @@ namespace generator {
     }
   };
 
+  class TypeStruct : public EvalType {
+    public:
+    std::string name;
+    std::map<std::string, std::pair<int, std::shared_ptr<EvalType>>> members;
+    TypeStruct(std::string_view n) : EvalType(), name(n) {
+      size = 0;
+    }
+    void add_member(std::string_view key, std::shared_ptr<EvalType> type) {
+      members.insert({std::string(key), {size, type}});
+      size += type->size;
+    }
+    std::pair<int, std::shared_ptr<EvalType>> get_member(std::string n) {
+      auto it = members.find(n);
+      if (it == members.end()) return {0, nullptr};
+      return it->second;
+    }
+  };
+
   class TypeFunc : public EvalType {
     public:
     std::vector<std::shared_ptr<EvalType>> type_args;
@@ -90,8 +108,8 @@ namespace generator {
   class Func {
     public:
     std::string name;
-    std::shared_ptr<EvalType> type;
-    Func(std::string n, std::shared_ptr<EvalType> t) : name(n), type(t) {}
+    std::shared_ptr<TypeFunc> type;
+    Func(std::string n, std::shared_ptr<TypeFunc> t) : name(n), type(t) {}
   };
 
   class LocalVar {
@@ -109,11 +127,16 @@ namespace generator {
     std::map<std::string, std::shared_ptr<GlobalVar>> global_vars;
     std::map<std::string, std::shared_ptr<Func>> funcs;
     std::vector<std::pair<std::string, std::string>> strs;
+    std::map<std::string, std::shared_ptr<TypeStruct>> structs;
 
     Context() : rsp(0) {}
 
-    void add_func(std::string key, std::shared_ptr<EvalType> type) {
+    void add_func(std::string key, std::shared_ptr<TypeFunc> type) {
       funcs.insert({key, std::make_shared<Func>(key, type)});
+    }
+
+    void add_struct(std::string_view key, std::shared_ptr<TypeStruct> type) {
+      structs.insert({std::string(key), type});
     }
 
     void add_global_var(std::string key, std::shared_ptr<EvalType> type) {
@@ -133,6 +156,12 @@ namespace generator {
     std::shared_ptr<Func> get_func(std::string_view key) {
       auto it = funcs.find(std::string(key));
       if (it == funcs.end()) return nullptr;
+      return it->second;
+    }
+
+    std::shared_ptr<TypeStruct> get_struct(std::string key) {
+      auto it = structs.find(key);
+      if (it == structs.end()) return nullptr;
       return it->second;
     }
 
@@ -172,6 +201,63 @@ namespace generator {
     //   std::cerr << rsp << std::endl;
     //   return !(rsp & 0xF);
     // }
+    std::shared_ptr<EvalType> create_type(std::shared_ptr<ASTTypeSpec> n) {
+      std::vector<std::shared_ptr<EvalType>> type_args;
+      std::shared_ptr<EvalType> type = nullptr;
+      switch (n->op->type)
+      {
+      case KwNum:
+        return std::make_shared<TypeNum>();
+      case KwArray:
+        if (!(type = create_type(n->of))) return nullptr;
+        return std::make_shared<TypeArray>(type, n->size);
+      case KwChar:
+        return std::make_shared<TypeChar>();
+      case KwPtr:
+        if (!(type = create_type(n->of))) return nullptr;
+        return std::make_shared<TypePtr>(type);
+      case KwFuncptr:
+        for (int i = 0; i < (int)n->args.size(); i++) {
+          if (!(type = create_type(n->args[i]))) return nullptr;
+          type_args.push_back(type);
+        }
+        if (!(type = create_type(n->type_spec))) return nullptr;
+        return std::make_shared<TypeFunc>(type_args, type);
+      case KwStruct:
+        type = get_struct(n->s_name);
+        if (!type) {
+          assert(false);
+        }
+        return type;
+      default:
+        break;
+      }
+      assert(false);
+      return nullptr;
+    }
+
+    std::shared_ptr<TypeFunc> create_func_type(std::shared_ptr<ASTFuncDeclaration> fd) {
+      std::vector<std::shared_ptr<EvalType>> type_args;
+      std::shared_ptr<EvalType> type = nullptr;
+      for (std::shared_ptr<ASTSimpleDeclaration> d: fd->declarator->args) {
+        if (!(type = create_type(d->type_spec))) return nullptr;
+        type_args.push_back(type);
+      }
+      if (!(type = create_type(fd->type_spec))) return nullptr;
+      return std::make_shared<TypeFunc>(type_args, type);
+    }
+
+    std::shared_ptr<TypeStruct> create_struct_type(std::shared_ptr<ASTStructDef> sd) {
+      std::shared_ptr<TypeStruct> ret = std::make_shared<TypeStruct>(
+        sd->declarator->op->sv
+      );
+      std::shared_ptr<EvalType> type = nullptr;
+      for (std::shared_ptr<ASTSimpleDeclaration> d: sd->declarations) {
+        if (!(type = create_type(d->type_spec))) return nullptr;
+        ret->add_member(d->declarator->op->sv, type);
+      }
+      return ret;
+    }
   };
   int string_literal_length(std::string_view sl);
   bool is_aligned_16(int x);
@@ -192,8 +278,6 @@ namespace generator {
   bool try_assign(std::shared_ptr<ASTExpr> l, std::shared_ptr<ASTExpr> r,
                   std::shared_ptr<Context> ctx, std::string &code);
   void push_args(int i, std::shared_ptr<EvalType> type, std::shared_ptr<Context> ctx, std::string &code);
-  std::shared_ptr<EvalType> create_type(std::shared_ptr<ASTTypeSpec> n);
-  std::shared_ptr<TypeFunc> create_func_type(std::shared_ptr<ASTFuncDeclaration> fd);
   std::string generate(std::shared_ptr<AST> ast);
 }
 #endif

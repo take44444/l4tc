@@ -1,6 +1,28 @@
 
+struct S
+  num b
+  num q
+  array<num>[2] aa
+
+func add(num x, num y) -> num
+  return x + y
+
+func sub(num x, num y) -> num
+  return x - y
+
+func f(num x) -> funcptr (num, num) -> num
+  if x
+    return add
+  else
+    return sub
+
 func main() -> num
-  array<array<num>[3]>[5] a
-  a[3][2]: 10
-  printf("%d\n", a[3][2])
+  funcptr (num) -> funcptr (num, num) -> num fp
+  ptr<funcptr (num) -> funcptr (num, num) -> num> fpp
+  struct S aaaaa
+
+  fpp: &fp
+  fp: f
+
+  printf(&"%d\n", (*fpp)(1)(100, 200))
   return 0

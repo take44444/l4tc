@@ -9,6 +9,12 @@ namespace parser {
     if ((t = expect_token_with_type(next, err, KwChar))) {
       return std::make_shared<ASTTypeSpec>(t);
     }
+    if ((t = expect_token_with_type(next, err, KwStruct))) {
+      std::shared_ptr<ASTTypeSpec> ret = std::make_shared<ASTTypeSpec>(t);
+      if (!(t = expect_token_with_type(next, err, Ident))) return nullptr;
+      ret->s_name = std::string(t->sv);
+      return ret;
+    }
     if ((t = expect_token_with_type(next, err, KwPtr))) {
       std::shared_ptr<ASTTypeSpec> ret = std::make_shared<ASTTypeSpec>(t);
       if (!expect_token_with_str(next, err, "<")) return nullptr;
@@ -22,9 +28,8 @@ namespace parser {
       if (!(ret->of = parse_type_spec(next, err))) return nullptr;
       if (!expect_token_with_str(next, err, ">")) return nullptr;
       if (!expect_token_with_str(next, err, "[")) return nullptr;
-      if ((t = expect_token_with_type(next, err, NumberConstant))) {
-        ret->size = std::stoi(std::string(t->sv));
-      } else return nullptr;
+      if (!(t = expect_token_with_type(next, err, NumberConstant))) return nullptr;
+      ret->size = std::stoi(std::string(t->sv));
       if (!expect_token_with_str(next, err, "]")) return nullptr;
       return ret;
     }
@@ -379,24 +384,6 @@ namespace parser {
         break;
       }
       ret->items.push_back(item);
-      // if (typeid(*item) == typeid(ASTElseStmt)) {
-      //   if (!ret->items.size()) 
-      // }
-      // if (
-      //   typeid(*ret->items.back()) == typeid(ASTIfStmt) &&
-      //   typeid(*item) == typeid(ASTElseStmt)
-      // ) {
-      //   std::dynamic_pointer_cast<ASTIfStmt>(ret->items.back())
-      //     ->false_stmt = std::dynamic_pointer_cast<ASTElseStmt>(item);
-      // } else if (
-      //   typeid(*ret->items.back()) == typeid(ASTElseStmt) &&
-      //   typeid(*item) == typeid(ASTElseStmt)
-      // ) {
-      //   std::dynamic_pointer_cast<ASTElseStmt>(ret->items.back())
-      //     ->false_stmt = std::dynamic_pointer_cast<ASTElseStmt>(item);
-      // } else {
-      //   ret->items.push_back(item);
-      // }
     }
     return nullptr;
   }
@@ -440,6 +427,23 @@ namespace parser {
     return ret;
   }
 
+  std::shared_ptr<ASTStructDef> parse_struct_def(Token **next, Error &err) {
+  // struct-declaration declaration LF declaration LF ...
+    if (!expect_token_with_type(next, err, KwStruct)) return nullptr;
+    std::shared_ptr<ASTStructDef> ret = std::make_shared<ASTStructDef>();
+    if (!(ret->declarator = parse_declarator(next, err))) return nullptr;
+    if (!expect_token_with_str(next, err, "\n")) return nullptr;
+    if (!consume_token_with_indents(next, 2)) return nullptr;
+
+    std::shared_ptr<ASTSimpleDeclaration> declaration;
+    while ((declaration = parse_simple_declaration(next, err))) {
+      ret->declarations.push_back(declaration);
+      if (!expect_token_with_str(next, err, "\n")) return nullptr;
+      if (!consume_token_with_indents(next, 2)) return ret;
+    }
+    return nullptr;
+  }
+
   std::shared_ptr<ASTExternalDeclaration> parse_external_declaration(Token **next, Error &err) {
     std::shared_ptr<ASTExternalDeclaration> ret = std::make_shared<ASTExternalDeclaration>();
     if (!(ret->declaration_spec = parse_declaration_spec(next, err))) return nullptr;
@@ -460,8 +464,9 @@ namespace parser {
 
     std::shared_ptr<AST> external_declaration;
     while (*next) {
-      if ((*next)->sv == "func") external_declaration = parse_func_def(next, err);
-      else external_declaration = parse_external_declaration(next, err);
+      external_declaration = parse_func_def(next, err);
+      if (!external_declaration) external_declaration = parse_struct_def(next, err);
+      if(!external_declaration) external_declaration = parse_external_declaration(next, err);
       if (!external_declaration) return nullptr;
       ret->external_declarations.push_back(external_declaration);
     }

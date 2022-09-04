@@ -43,6 +43,7 @@ namespace parser {
     int size;
     std::vector<std::shared_ptr<ASTTypeSpec>> args;
     std::shared_ptr<ASTTypeSpec> type_spec;
+    std::string s_name;
     ASTTypeSpec(Token *t) : AST(), op(t) {
       of = nullptr;
       type_spec = nullptr;
@@ -242,6 +243,15 @@ namespace parser {
     std::shared_ptr<ASTFuncDeclaration> declaration;
     std::shared_ptr<ASTCompoundStmt> body;
     ASTFuncDef() : AST() {}
+  };
+
+  class ASTStructDef : public AST {
+    public:
+    std::shared_ptr<ASTDeclarator> declarator;
+    std::vector<std::shared_ptr<ASTSimpleDeclaration>> declarations;
+    ASTStructDef() : AST() {
+      declarations = std::vector<std::shared_ptr<ASTSimpleDeclaration>>();
+    }
   };
 
   class ASTExternalDeclaration : public AST {

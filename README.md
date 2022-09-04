@@ -91,7 +91,7 @@ func main() -> num
   fpp: &fp
   fp: f
 
-  return ((*fpp)(0))(100, 200)
+  return (*fpp)(0)(100, 200)
 ```
 
 ## Example
@@ -124,7 +124,7 @@ func main() -> num
   g2: 200
 
   loop a < 2
-    printf("%d\n", ((*fpp)(*p))(g1, g2))
+    printf(&"%d\n", ((*fpp)(*p))(g1, g2))
     *p: *p + 1
 
   return 0
@@ -149,7 +149,7 @@ The output will be
 - [ ] 配列の初期化
 - [x] 配列の値渡し
 - [ ] 構造体
-- [ ] 構造体の値渡し
+- [x] 構造体の値渡し
 - [ ] 構造体の初期化
 - [x] ポインタ，関数ポインタ
 - [x] 参照

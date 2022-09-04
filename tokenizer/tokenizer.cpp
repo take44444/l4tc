@@ -42,6 +42,8 @@ namespace tokenizer {
         return "KwPtr";
       case KwReturn:
         return "KwReturn";
+      case KwStruct:
+        return "KwStruct";
       case Unknown:
         return "Unknown";
       default:
@@ -88,6 +90,8 @@ namespace tokenizer {
         return "type-specifier";
       case KwReturn:
         return "return-statement";
+      case KwStruct:
+        return "type-specifier";
       default:
         return "unknown";
     }
@@ -121,6 +125,7 @@ namespace tokenizer {
       else if (ret->sv == "num") ret->type = KwNum;           // num
       else if (ret->sv == "ptr") ret->type = KwPtr;           // ptr
       else if (ret->sv == "return") ret->type = KwReturn;     // return
+      else if (ret->sv == "struct") ret->type = KwStruct;     // struct
       return ret;
     }
     if ('"' == *p) {

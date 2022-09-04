@@ -94,6 +94,12 @@ namespace generator {
       }
       return ret;
     }
+    if (typeid(*x) == typeid(TypeStruct)) {
+      assert(typeid(*y) == typeid(TypeStruct));
+      std::shared_ptr<TypeStruct> xx = std::dynamic_pointer_cast<TypeStruct>(x);
+      std::shared_ptr<TypeStruct> yy = std::dynamic_pointer_cast<TypeStruct>(y);
+      return xx->name == yy->name;
+    }
     return true;
   }
 
@@ -105,6 +111,17 @@ namespace generator {
     pop("r11", ctx, code);
     if (typeid(*l->eval_type) == typeid(TypeArray)) {
       int size = std::dynamic_pointer_cast<TypeArray>(l->eval_type)->size;
+      push("r11", ctx, code);
+      for (int i = 0; i < align_8(size) / 8; i++) {
+        code += "mov r12, [r11]\n";
+        code += "mov [r10], r12\n";
+        code += "add r10, 8\n";
+        code += "add r11, 8\n";
+      }
+      return true;
+    }
+    if (typeid(*l->eval_type) == typeid(TypeStruct)) {
+      int size = std::dynamic_pointer_cast<TypeStruct>(l->eval_type)->size;
       push("r11", ctx, code);
       for (int i = 0; i < align_8(size) / 8; i++) {
         code += "mov r12, [r11]\n";
@@ -134,39 +151,18 @@ namespace generator {
       }
       return;
     }
+    if (typeid(*type) == typeid(TypeStruct)) { // 値渡し
+      code += "lea r10, [rbp - " + std::to_string(-ctx->rsp) + "]\n";
+      code += "mov r11, " + param_reg_names[i] + "\n";
+      for (int i = 0; i < align_8(type->size) / 8; i++) {
+        code += "mov r12, [r11]\n";
+        code += "mov [r10], r12\n";
+        code += "add r10, 8\n";
+        code += "add r11, 8\n";
+      }
+      return;
+    }
     code += "mov [rbp - " + std::to_string(-ctx->rsp) + "], " + param_reg_names[i] + "\n";
     return;
-  }
-
-  std::shared_ptr<EvalType> create_type(std::shared_ptr<ASTTypeSpec> n) {
-    std::vector<std::shared_ptr<EvalType>> type_args;
-    switch (n->op->type)
-    {
-    case KwNum:
-      return std::make_shared<TypeNum>();
-    case KwArray:
-      return std::make_shared<TypeArray>(create_type(n->of), n->size);
-    case KwChar:
-      return std::make_shared<TypeChar>();
-    case KwPtr:
-      return std::make_shared<TypePtr>(create_type(n->of));
-    case KwFuncptr:
-      for (int i = 0; i < (int)n->args.size(); i++) {
-        type_args.push_back(create_type(n->args[i]));
-      }
-      return std::make_shared<TypeFunc>(type_args, create_type(n->type_spec));
-    default:
-      break;
-    }
-    assert(false);
-    return nullptr;
-  }
-
-  std::shared_ptr<TypeFunc> create_func_type(std::shared_ptr<ASTFuncDeclaration> fd) {
-    std::vector<std::shared_ptr<EvalType>> type_args;
-    for (std::shared_ptr<ASTSimpleDeclaration> d: fd->declarator->args) {
-      type_args.push_back(create_type(d->type_spec));
-    }
-    return std::make_shared<TypeFunc>(type_args, create_type(fd->type_spec));
   }
 }

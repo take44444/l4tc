@@ -23,6 +23,7 @@ namespace tokenizer {
     KwNum,          // num
     KwPtr,          // ptr
     KwReturn,       // return
+    KwStruct,       // struct
     // Unexpected Token
     Unknown,        // unknown
   };
