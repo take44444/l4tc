@@ -323,6 +323,25 @@ namespace generator {
       n->is_assignable = true;
       return;
     }
+    if (typeid(*ast) == typeid(ASTStructAccessExpr)) {
+      std::shared_ptr<ASTStructAccessExpr> n = std::dynamic_pointer_cast<ASTStructAccessExpr>(ast);
+      generate_text_section(n->primary, ctx, code);
+      if (typeid(*n->primary->eval_type) != typeid(TypeStruct)) {
+        // TODO error
+        assert(false);
+      }
+      std::shared_ptr<TypeStruct> s = std::dynamic_pointer_cast<TypeStruct>(n->primary->eval_type);
+      std::pair<int, std::shared_ptr<EvalType>> m = s->get_member(n->op->sv);
+      if (!m.second) {
+        assert(false);
+      }
+      pop("r10", ctx, code);
+      code += "add r10, " + std::to_string(m.first) + "\n";
+      push("r10", ctx, code);
+      n->eval_type = m.second;
+      n->is_assignable = true;
+      return;
+    }
     if (typeid(*ast) == typeid(ASTPrimaryExpr)) {
       std::shared_ptr<ASTPrimaryExpr> n = std::dynamic_pointer_cast<ASTPrimaryExpr>(ast);
       generate_text_section(n->expr, ctx, code);

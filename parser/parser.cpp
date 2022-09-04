@@ -106,6 +106,15 @@ namespace parser {
         if (!expect_token_with_str(next, err, "]")) return nullptr;
         continue;
       }
+      if (expect_token_with_str(next, err, ".")) {
+        Token *t = expect_token_with_type(next, err, Ident);
+        if (!t) return nullptr;
+        // now it is struct-access-expr
+        std::shared_ptr<ASTStructAccessExpr> sa = std::make_shared<ASTStructAccessExpr>(t);
+        sa->primary = ret;
+        ret = sa;
+        continue;
+      }
       break;
     }
     return ret;

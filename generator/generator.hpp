@@ -57,8 +57,8 @@ namespace generator {
       members.insert({std::string(key), {size, type}});
       size += type->size;
     }
-    std::pair<int, std::shared_ptr<EvalType>> get_member(std::string n) {
-      auto it = members.find(n);
+    std::pair<int, std::shared_ptr<EvalType>> get_member(std::string_view key) {
+      auto it = members.find(std::string(key));
       if (it == members.end()) return {0, nullptr};
       return it->second;
     }

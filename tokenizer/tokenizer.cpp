@@ -176,7 +176,7 @@ namespace tokenizer {
         '+' == *p ||
         '/' == *p || '*' == *p || '%' == *p ||
         '(' == *p || ')' == *p ||
-        '[' == *p || ']' == *p ||
+        '[' == *p || ']' == *p || '.' == *p ||
         ',' == *p) {
       return new Token(line, src, p, 1, Punctuator);
     }

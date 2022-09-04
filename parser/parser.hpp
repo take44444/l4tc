@@ -94,6 +94,13 @@ namespace parser {
     ASTArrayAccessExpr() : ASTExpr() {}
   };
 
+  class ASTStructAccessExpr : public ASTExpr {
+    public:
+    std::shared_ptr<ASTExpr> primary;
+    Token *op;
+    ASTStructAccessExpr(Token *t) : ASTExpr(), op(t) {}
+  };
+
   class ASTMultiplicativeExpr : public ASTExpr {
     public:
     Token *op;

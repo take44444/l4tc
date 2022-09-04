@@ -1,28 +1,36 @@
 
-struct S
-  num b
-  num q
-  array<num>[2] aa
+struct Data1
+  array<array<num>[2]>[2] a
 
-func add(num x, num y) -> num
-  return x + y
-
-func sub(num x, num y) -> num
-  return x - y
-
-func f(num x) -> funcptr (num, num) -> num
-  if x
-    return add
-  else
-    return sub
+struct Data2
+  array<num>[2] a
+  struct Data1 d1
+  ptr<struct Data1> d1p
 
 func main() -> num
-  funcptr (num) -> funcptr (num, num) -> num fp
-  ptr<funcptr (num) -> funcptr (num, num) -> num> fpp
-  struct S aaaaa
+  struct Data1 data1
+  struct Data2 data2
 
-  fpp: &fp
-  fp: f
+  data1.a[1][0]: 10
+  data1.a[1][1]: 20
 
-  printf(&"%d\n", (*fpp)(1)(100, 200))
+  data2.a: data1.a[1]
+  data2.d1: data1
+  data2.d1p: &data1
+
+  data1.a[1][0]: 100
+  data2.a[0]: 200
+  data2.d1.a[1][0]: 300
+
+  printf(&"%d\n", data1.a[1][0])
+  printf(&"%d\n", data1.a[1][1])
+
+  printf(&"%d\n", data2.a[0])
+  printf(&"%d\n", data2.a[1])
+
+  printf(&"%d\n", data2.d1.a[1][0])
+  printf(&"%d\n", data2.d1.a[1][1])
+
+  printf(&"%d\n", (*data2.d1p).a[1][0])
+  printf(&"%d\n", (*data2.d1p).a[1][1])
   return 0
