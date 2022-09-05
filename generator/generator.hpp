@@ -8,11 +8,15 @@ namespace generator {
   using namespace tokenizer;
   using namespace parser;
   const std::string param_reg_names[6] = {"rdi", "rsi", "rdx", "rcx", "r8",  "r9"};
+  int string_literal_length(std::string_view sl);
+  bool is_aligned_16(int x);
+  int align_8(int x);
 
   class EvalType {
     public:
     int size;
     EvalType() {}
+    virtual int calculate_size() = 0;
     virtual ~EvalType() = default;
   };
 
@@ -20,6 +24,9 @@ namespace generator {
     public:
     TypeNum() : EvalType() {
       size = 8;
+    }
+    int calculate_size() {
+      return 8;
     }
   };
 
@@ -29,6 +36,9 @@ namespace generator {
     TypePtr(std::shared_ptr<EvalType> of) : EvalType(), of(of) {
       size = 8;
     }
+    int calculate_size() {
+      return 8;
+    }
   };
 
   class TypeChar : public EvalType {
@@ -36,13 +46,21 @@ namespace generator {
     TypeChar() : EvalType() {
       size = 1;
     }
+    int calculate_size() {
+      return 1;
+    }
   };
 
   class TypeArray : public EvalType {
     public:
     std::shared_ptr<EvalType> of;
-    TypeArray(std::shared_ptr<EvalType> of, int sz) : EvalType(), of(of) {
+    int array_size;
+    TypeArray(std::shared_ptr<EvalType> of, int sz) : EvalType(), of(of), array_size(sz) {
       size = sz * of->size;
+    }
+    int calculate_size() {
+      size = array_size * of->calculate_size();
+      return size;
     }
   };
 
@@ -54,13 +72,20 @@ namespace generator {
       size = 0;
     }
     void add_member(std::string_view key, std::shared_ptr<EvalType> type) {
-      members.insert({std::string(key), {size, type}});
-      size += type->size;
+      members.insert({std::string(key), {0, type}});
     }
     std::pair<int, std::shared_ptr<EvalType>> get_member(std::string_view key) {
       auto it = members.find(std::string(key));
       if (it == members.end()) return {0, nullptr};
       return it->second;
+    }
+    int calculate_size() {
+      size = 0;
+      for (auto &m: members) {
+        m.second.first = size;
+        size += align_8(m.second.second->calculate_size());
+      }
+      return size;
     }
   };
 
@@ -76,11 +101,17 @@ namespace generator {
     : EvalType(), ret_type(rt) {
       size = 8;
     }
+    int calculate_size() {
+      return 8;
+    }
   };
 
   class TypeAny : public EvalType {
     public:
     TypeAny() : EvalType() {}
+    int calculate_size() {
+      return 0;
+    }
   };
 
   // class LoopInfo {
@@ -247,21 +278,26 @@ namespace generator {
       return std::make_shared<TypeFunc>(type_args, type);
     }
 
-    std::shared_ptr<TypeStruct> create_struct_type(std::shared_ptr<ASTStructDef> sd) {
-      std::shared_ptr<TypeStruct> ret = std::make_shared<TypeStruct>(
-        sd->declarator->op->sv
-      );
-      std::shared_ptr<EvalType> type = nullptr;
-      for (std::shared_ptr<ASTSimpleDeclaration> d: sd->declarations) {
-        if (!(type = create_type(d->type_spec))) return nullptr;
-        ret->add_member(d->declarator->op->sv, type);
+    bool create_and_add_struct_types(std::vector<std::shared_ptr<ASTStructDef>> ordered_sds) {
+      std::string name;
+      for (std::shared_ptr<ASTStructDef> sd: ordered_sds) {
+        name = std::string(sd->declarator->op->sv);
+        structs.insert({name, std::make_shared<TypeStruct>(name)});
       }
-      return ret;
+      std::shared_ptr<EvalType> type = nullptr;
+      for (std::shared_ptr<ASTStructDef> sd: ordered_sds) {
+        name = std::string(sd->declarator->op->sv);
+        for (std::shared_ptr<ASTSimpleDeclaration> d: sd->declarations) {
+          if (!(type = create_type(d->type_spec))) return false;
+          structs.at(name)->add_member(d->declarator->op->sv, type);
+        }
+      }
+      for (std::shared_ptr<ASTStructDef> sd: ordered_sds) {
+        structs.at(std::string(sd->declarator->op->sv))->calculate_size();
+      }
+      return true;
     }
   };
-  int string_literal_length(std::string_view sl);
-  bool is_aligned_16(int x);
-  int align_8(int x);
   void eval(std::shared_ptr<ASTExpr> expr, std::string reg, std::string &code);
   std::string create_label();
   void derefer(std::string reg, std::string &code);

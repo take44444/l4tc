@@ -29,12 +29,10 @@ namespace generator {
   }
 
   void get_func_addr(std::string reg, std::shared_ptr<Func> f, std::string &code) {
-    code += ".global " + f->name + "\n";
     code += "mov " + reg + ", [rip + " + f->name + "@GOTPCREL]\n";
   }
 
   void get_global_var_addr(std::string reg, std::shared_ptr<GlobalVar> gv, std::string &code) {
-    code += ".global " + gv->name + "\n";
     code += "mov " + reg + ", [rip + " + gv->name + "@GOTPCREL]\n";
   }
 

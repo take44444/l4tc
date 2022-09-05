@@ -1,12 +1,95 @@
 #include "./generator.hpp"
 
 namespace generator {
-
+  bool sd_dfs(int dfs_id,
+              std::string &node,
+              std::map<std::string, std::shared_ptr<ASTStructDef>> &nodes,
+              std::map<std::string, int> &visited,
+              std::vector<std::shared_ptr<ASTStructDef>> &ordered_sds) {
+    auto it = visited.find(node);
+    if (it == visited.end()) {
+      assert(false);
+      return false;
+    }
+    if (it->second == dfs_id) {
+      assert(false);
+      return false;
+    }
+    if (it->second) return true;
+    it->second = dfs_id;
+    for (std::shared_ptr<ASTSimpleDeclaration> next: nodes.at(node)->declarations) {
+      std::shared_ptr<ASTTypeSpec> type_spec = next->type_spec;
+      while (type_spec->op->type == KwArray) type_spec = type_spec->of;
+      if (type_spec->op->type != KwStruct) continue;
+      if (!sd_dfs(dfs_id,
+                 type_spec->s_name,
+                 nodes,
+                 visited,
+                 ordered_sds)) return false;
+    }
+    ordered_sds.push_back(nodes.at(node));
+    return true;
+  }
+  std::vector<std::shared_ptr<ASTStructDef>> sd_dag_loop_chk(std::vector<std::shared_ptr<ASTStructDef>> &sds) {
+    std::vector<std::shared_ptr<ASTStructDef>> ret;
+    std::map<std::string, std::shared_ptr<ASTStructDef>> nodes;
+    std::map<std::string, int> visited;
+    for (std::shared_ptr<ASTStructDef> sd: sds) {
+      std::string name = std::string(sd->declarator->op->sv);
+      nodes.insert({name, sd});
+      visited.insert({name, 0});
+    }
+    for (int i = 1; i <= (int)sds.size(); i++) {
+      std::string name = std::string(sds[i-1]->declarator->op->sv);
+      if(!sd_dfs(i, name, nodes, visited, ret)) {
+        assert(false);
+        return {};
+      }
+    }
+    return ret;
+  }
+  bool init_generator(std::shared_ptr<ASTTranslationUnit> tu, std::shared_ptr<Context> ctx) {
+    std::vector<std::shared_ptr<ASTStructDef>> sds;
+    for (std::shared_ptr<AST> d: tu->external_declarations) {
+      if (typeid(*d) == typeid(ASTStructDef)) {
+        sds.push_back(std::dynamic_pointer_cast<ASTStructDef>(d));
+      }
+    }
+    std::vector<std::shared_ptr<ASTStructDef>> ordered_sds = sd_dag_loop_chk(sds);
+    if (ordered_sds.size() != sds.size()) {
+      assert(false);
+      return false;
+    }
+    if (!ctx->create_and_add_struct_types(ordered_sds)) {
+      assert(false);
+      return false;
+    }
+    for (std::shared_ptr<AST> d: tu->external_declarations) {
+      if (typeid(*d) == typeid(ASTFuncDef)) {
+        std::shared_ptr<ASTFuncDef> n = std::dynamic_pointer_cast<ASTFuncDef>(d);
+        std::shared_ptr<ASTFuncDeclaration> fd = n->declaration;
+        std::shared_ptr<TypeFunc> tf = ctx->create_func_type(fd);
+        if (!tf) {
+          assert(false);
+          return false;
+        }
+        if (fd->declarator->args.size() > 6) {
+          assert(false);
+          return false;
+        }
+        ctx->add_func(std::string(fd->declarator->declarator->op->sv), tf);
+        continue;
+      }
+    }
+    return true;
+  }
   void generate_text_section(std::shared_ptr<AST> ast, std::shared_ptr<Context> ctx, std::string &code) {
     if (typeid(*ast) == typeid(ASTTranslationUnit)) {
       std::shared_ptr<ASTTranslationUnit> n = std::dynamic_pointer_cast<ASTTranslationUnit>(ast);
+      init_generator(n, ctx);
       code += ".intel_syntax noprefix\n"; // use intel syntax
       code += ".text\n"; // text section
+      code += ".global main\n";
       for (std::shared_ptr<AST> d: n->external_declarations) {
         generate_text_section(d, ctx, code);
       }
@@ -25,37 +108,25 @@ namespace generator {
       return;
     }
     if (typeid(*ast) == typeid(ASTStructDef)) {
-      std::shared_ptr<ASTStructDef> n = std::dynamic_pointer_cast<ASTStructDef>(ast);
-      std::shared_ptr<TypeStruct> ts = ctx->create_struct_type(n);
-      if (!ts) {
-        assert(false);
-      }
-      ctx->add_struct(n->declarator->op->sv, ts);
       return;
     }
     if (typeid(*ast) == typeid(ASTFuncDef)) {
       std::shared_ptr<ASTFuncDef> n = std::dynamic_pointer_cast<ASTFuncDef>(ast);
-      std::shared_ptr<ASTFuncDeclaration> fd = n->declaration;
-      std::string func_name = std::string(fd->declarator->declarator->op->sv);
-      std::shared_ptr<TypeFunc> tf = ctx->create_func_type(fd);
-      if (!tf) {
-        assert(false);
-      }
-      if (fd->declarator->args.size() > 6) {
-        assert(false);
-      }
-      ctx->add_func(func_name, tf);
-      code += ".global " + func_name + "\n";
+      std::string func_name = std::string(
+        n->declaration->declarator->declarator->op->sv
+      );
+      std::shared_ptr<Func> f = ctx->get_func(func_name);
+      assert(f);
       code += func_name + ":\n";
       code += "push rbp\n";
       code += "mov rbp, rsp\n";
       ctx->rsp = 0; // now rsp == rbp
       ctx->start_scope();
-      for (int i=0; i < (int)tf->type_args.size(); i++) {
-        push_args(i, tf->type_args[i], ctx, code);
+      for (int i=0; i < (int)f->type->type_args.size(); i++) {
+        push_args(i, f->type->type_args[i], ctx, code);
         ctx->add_local_var(
-          std::string(fd->declarator->args[i]->declarator->op->sv),
-          tf->type_args[i]
+          std::string(n->declaration->declarator->args[i]->declarator->op->sv),
+          f->type->type_args[i]
         );
       }
       generate_text_section(n->body, ctx, code);
@@ -377,7 +448,6 @@ namespace generator {
           return;
         }
         // TODO get extern
-        code += ".global " + std::string(n->op->sv) + "\n";
         code += "mov r10, [rip + " + std::string(n->op->sv) + "@GOTPCREL]\n";
         push("r10", ctx, code);
         n->eval_type = std::make_shared<TypeFunc>(std::make_shared<TypeAny>());
@@ -412,7 +482,6 @@ namespace generator {
     }
     for (auto &p: ctx->global_vars) {
       code += ".align 8\n";
-      code += ".global " + p.first + "\n";
       code += p.first + ":\n";
       code += ".byte ";
       for (int i = 0; i < p.second->type->size; i++) {

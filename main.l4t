@@ -1,36 +1,27 @@
 
 struct Data1
-  array<array<num>[2]>[2] a
+  array<struct Data2>[2] d2
+  ptr<struct Data1> other
 
 struct Data2
   array<num>[2] a
-  struct Data1 d1
-  ptr<struct Data1> d1p
 
 func main() -> num
-  struct Data1 data1
-  struct Data2 data2
+  struct Data1 a, b
 
-  data1.a[1][0]: 10
-  data1.a[1][1]: 20
+  a.other: &b
+  b.other: &a
 
-  data2.a: data1.a[1]
-  data2.d1: data1
-  data2.d1p: &data1
+  a.d2[0].a[0]: 10
+  b.d2[0].a[0]: 11
+  a.d2[0].a[1]: 20
+  b.d2[0].a[1]: 21
+  a.d2[1].a[0]: 30
+  b.d2[1].a[0]: 31
+  a.d2[1].a[1]: 40
+  b.d2[1].a[1]: 41
 
-  data1.a[1][0]: 100
-  data2.a[0]: 200
-  data2.d1.a[1][0]: 300
+  printf(&"%d\n", (*(*(*(*a.other).other).other).other).d2[1].a[0])
+  printf(&"%d\n", (*(*(*(*(*a.other).other).other).other).other).d2[1].a[1])
 
-  printf(&"%d\n", data1.a[1][0])
-  printf(&"%d\n", data1.a[1][1])
-
-  printf(&"%d\n", data2.a[0])
-  printf(&"%d\n", data2.a[1])
-
-  printf(&"%d\n", data2.d1.a[1][0])
-  printf(&"%d\n", data2.d1.a[1][1])
-
-  printf(&"%d\n", (*data2.d1p).a[1][0])
-  printf(&"%d\n", (*data2.d1p).a[1][1])
   return 0
