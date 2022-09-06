@@ -11,12 +11,31 @@ namespace generator {
   int string_literal_length(std::string_view sl);
   bool is_aligned_16(int x);
   int align_8(int x);
+  class GError {
+    public:
+    Token *token;
+    std::string message;
+    explicit GError(std::string mes, Token *t) : token(t), message(mes) {}
+    std::string get_error_string() {
+      if (!token) return message;
+      std::string ret = "line:" + std::to_string(token->line) +
+                        "/pos:" + std::to_string(token->pos) +
+                        ": " + message + '\n';
+      for (char *p = token->line_begin; *p && *p != '\n'; ret += *p++);
+      ret += '\n';
+      for (int i_ = 1; i_ < (int)token->pos; i_++) ret += ' ';
+      ret += '^';
+      for (int i_ = 1; i_ < (int)token->sv.length(); i_++) ret += '~';
+      return ret;
+    }
+  };
 
   class EvalType {
     public:
     int size;
     EvalType() {}
     virtual int calculate_size() = 0;
+    virtual std::string to_string() = 0;
     virtual ~EvalType() = default;
   };
 
@@ -27,6 +46,9 @@ namespace generator {
     }
     int calculate_size() {
       return 8;
+    }
+    std::string to_string() {
+      return "num";
     }
   };
 
@@ -39,6 +61,9 @@ namespace generator {
     int calculate_size() {
       return 8;
     }
+    std::string to_string() {
+      return "ptr<" + of->to_string() + ">";
+    }
   };
 
   class TypeChar : public EvalType {
@@ -48,6 +73,9 @@ namespace generator {
     }
     int calculate_size() {
       return 1;
+    }
+    std::string to_string() {
+      return "char";
     }
   };
 
@@ -61,6 +89,9 @@ namespace generator {
     int calculate_size() {
       size = array_size * of->calculate_size();
       return size;
+    }
+    std::string to_string() {
+      return "array<" + of->to_string() + ">[" + std::to_string(array_size) + "]";
     }
   };
 
@@ -87,6 +118,9 @@ namespace generator {
       }
       return size;
     }
+    std::string to_string() {
+      return "struct " + name;
+    }
   };
 
   class TypeFunc : public EvalType {
@@ -104,6 +138,15 @@ namespace generator {
     int calculate_size() {
       return 8;
     }
+    std::string to_string() {
+      std::string ret = "funcptr(";
+      for (int i = 0; i < (int)type_args.size(); i++) {
+        ret += (i == 0 ? "" : ", ");
+        ret += type_args[i]->to_string();
+      }
+      ret += ") -> " + ret_type->to_string();
+      return ret;
+    }
   };
 
   class TypeAny : public EvalType {
@@ -111,6 +154,9 @@ namespace generator {
     TypeAny() : EvalType() {}
     int calculate_size() {
       return 0;
+    }
+    std::string to_string() {
+      return "any";
     }
   };
 
@@ -190,8 +236,8 @@ namespace generator {
       return it->second;
     }
 
-    std::shared_ptr<TypeStruct> get_struct(std::string key) {
-      auto it = structs.find(key);
+    std::shared_ptr<TypeStruct> get_struct(std::string_view key) {
+      auto it = structs.find(std::string(key));
       if (it == structs.end()) return nullptr;
       return it->second;
     }
@@ -212,15 +258,12 @@ namespace generator {
     }
 
     void start_scope() {
-      // saved_rsp.push_back(rsp);
       scopes_local_vars.push_back(
         std::map<std::string, std::shared_ptr<LocalVar>>()
       );
     }
 
     void end_scope() {
-      // assert(saved_rsp.back() == rsp);
-      // saved_rsp.pop_back();
       scopes_local_vars.pop_back();
     }
 
@@ -232,7 +275,7 @@ namespace generator {
     //   std::cerr << rsp << std::endl;
     //   return !(rsp & 0xF);
     // }
-    std::shared_ptr<EvalType> create_type(std::shared_ptr<ASTTypeSpec> n) {
+    std::shared_ptr<EvalType> create_type(std::shared_ptr<ASTTypeSpec> n, GError &err) {
       std::vector<std::shared_ptr<EvalType>> type_args;
       std::shared_ptr<EvalType> type = nullptr;
       switch (n->op->type)
@@ -240,24 +283,25 @@ namespace generator {
       case KwNum:
         return std::make_shared<TypeNum>();
       case KwArray:
-        if (!(type = create_type(n->of))) return nullptr;
+        if (!(type = create_type(n->of, err))) return nullptr;
         return std::make_shared<TypeArray>(type, n->size);
       case KwChar:
         return std::make_shared<TypeChar>();
       case KwPtr:
-        if (!(type = create_type(n->of))) return nullptr;
+        if (!(type = create_type(n->of, err))) return nullptr;
         return std::make_shared<TypePtr>(type);
       case KwFuncptr:
         for (int i = 0; i < (int)n->args.size(); i++) {
-          if (!(type = create_type(n->args[i]))) return nullptr;
+          if (!(type = create_type(n->args[i], err))) return nullptr;
           type_args.push_back(type);
         }
-        if (!(type = create_type(n->type_spec))) return nullptr;
+        if (!(type = create_type(n->type_spec, err))) return nullptr;
         return std::make_shared<TypeFunc>(type_args, type);
       case KwStruct:
-        type = get_struct(n->s_name);
+        type = get_struct(n->s->sv);
         if (!type) {
-          assert(false);
+          err = GError(std::string(n->s->sv) + " is not defined", n->s);
+          return nullptr;
         }
         return type;
       default:
@@ -267,18 +311,18 @@ namespace generator {
       return nullptr;
     }
 
-    std::shared_ptr<TypeFunc> create_func_type(std::shared_ptr<ASTFuncDeclaration> fd) {
+    std::shared_ptr<TypeFunc> create_func_type(std::shared_ptr<ASTFuncDeclaration> fd, GError &err) {
       std::vector<std::shared_ptr<EvalType>> type_args;
       std::shared_ptr<EvalType> type = nullptr;
       for (std::shared_ptr<ASTSimpleDeclaration> d: fd->declarator->args) {
-        if (!(type = create_type(d->type_spec))) return nullptr;
+        if (!(type = create_type(d->type_spec, err))) return nullptr;
         type_args.push_back(type);
       }
-      if (!(type = create_type(fd->type_spec))) return nullptr;
+      if (!(type = create_type(fd->type_spec, err))) return nullptr;
       return std::make_shared<TypeFunc>(type_args, type);
     }
 
-    bool create_and_add_struct_types(std::vector<std::shared_ptr<ASTStructDef>> ordered_sds) {
+    bool create_and_add_struct_types(std::vector<std::shared_ptr<ASTStructDef>> ordered_sds, GError &err) {
       std::string name;
       for (std::shared_ptr<ASTStructDef> sd: ordered_sds) {
         name = std::string(sd->declarator->op->sv);
@@ -288,7 +332,7 @@ namespace generator {
       for (std::shared_ptr<ASTStructDef> sd: ordered_sds) {
         name = std::string(sd->declarator->op->sv);
         for (std::shared_ptr<ASTSimpleDeclaration> d: sd->declarations) {
-          if (!(type = create_type(d->type_spec))) return false;
+          if (!(type = create_type(d->type_spec, err))) return false;
           structs.at(name)->add_member(d->declarator->op->sv, type);
         }
       }
@@ -314,6 +358,7 @@ namespace generator {
   bool try_assign(std::shared_ptr<ASTExpr> l, std::shared_ptr<ASTExpr> r,
                   std::shared_ptr<Context> ctx, std::string &code);
   void push_args(int i, std::shared_ptr<EvalType> type, std::shared_ptr<Context> ctx, std::string &code);
-  std::string generate(std::shared_ptr<AST> ast);
+  std::vector<std::shared_ptr<ASTStructDef>> is_dag(std::vector<std::shared_ptr<ASTStructDef>> &sds, GError &err);
+  std::string generate(std::shared_ptr<AST> ast, GError &err);
 }
 #endif

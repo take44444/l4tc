@@ -10,11 +10,11 @@ namespace generator {
 namespace parser {
   using namespace tokenizer;
   using namespace generator;
-  class Error {
+  class PError {
     public:
     Token *token;
     std::string message;
-    explicit Error(std::string expected, std::string found, Token *t) : token(t) {
+    explicit PError(std::string expected, std::string found, Token *t) : token(t) {
       message = "error: expected " + expected + ", found " + found;
     }
     std::string get_error_string() {
@@ -43,7 +43,7 @@ namespace parser {
     int size;
     std::vector<std::shared_ptr<ASTTypeSpec>> args;
     std::shared_ptr<ASTTypeSpec> type_spec;
-    std::string s_name;
+    Token *s;
     ASTTypeSpec(Token *t) : AST(), op(t) {
       of = nullptr;
       type_spec = nullptr;
@@ -82,7 +82,8 @@ namespace parser {
     public:
     std::shared_ptr<ASTExpr> primary;
     std::vector<std::shared_ptr<ASTExpr>> args;
-    ASTFuncCallExpr() : ASTExpr() {
+    Token *op;
+    ASTFuncCallExpr(Token *t) : ASTExpr(), op(t) {
       args = std::vector<std::shared_ptr<ASTExpr>>();
     }
   };
@@ -91,7 +92,8 @@ namespace parser {
     public:
     std::shared_ptr<ASTExpr> primary;
     std::shared_ptr<ASTExpr> expr;
-    ASTArrayAccessExpr() : ASTExpr() {}
+    Token *op;
+    ASTArrayAccessExpr(Token *t) : ASTExpr(), op(t) {}
   };
 
   class ASTStructAccessExpr : public ASTExpr {
@@ -158,7 +160,8 @@ namespace parser {
 
   class ASTAssignExpr : public ASTExpr {
     public:
-    ASTAssignExpr() : ASTExpr() {}
+    Token *op;
+    ASTAssignExpr(Token *t) : ASTExpr(), op(t) {}
   };
 
   class ASTExprStmt : public AST {
@@ -218,7 +221,8 @@ namespace parser {
     std::shared_ptr<ASTExpr> cond;
     std::shared_ptr<ASTCompoundStmt> true_stmt;
     std::shared_ptr<ASTElseStmt> false_stmt;
-    ASTElseStmt() : AST(), cond(nullptr), false_stmt(nullptr) {}
+    Token *op;
+    ASTElseStmt(Token *t) : AST(), cond(nullptr), false_stmt(nullptr), op(t) {}
   };
 
   class ASTIfStmt : public AST {
@@ -226,14 +230,16 @@ namespace parser {
     std::shared_ptr<ASTExpr> cond;
     std::shared_ptr<ASTCompoundStmt> true_stmt;
     std::shared_ptr<ASTElseStmt> false_stmt;
-    ASTIfStmt() : AST(), cond(nullptr), false_stmt(nullptr) {}
+    Token *op;
+    ASTIfStmt(Token *t) : AST(), cond(nullptr), false_stmt(nullptr), op(t) {}
   };
 
   class ASTFuncDeclarator : public AST {
     public:
     std::shared_ptr<ASTDeclarator> declarator;
     std::vector<std::shared_ptr<ASTSimpleDeclaration>> args;
-    ASTFuncDeclarator() : AST() {
+    Token *op;
+    ASTFuncDeclarator(Token *t) : AST(), op(t) {
       args = std::vector<std::shared_ptr<ASTSimpleDeclaration>>();
     }
   };
@@ -279,15 +285,15 @@ namespace parser {
   };
 
   // parser.cpp
-  std::shared_ptr<ASTTranslationUnit> parse(Token **head, Error &err);
+  std::shared_ptr<ASTTranslationUnit> parse(Token **head, PError &err);
   void print_ast(std::shared_ptr<AST> n);
 
   // utils.cpp
-  Token *expect_token_with_str(Token **next, Error &err, std::string str);
+  Token *expect_token_with_str(Token **next, PError &err, std::string str);
   Token *consume_token_with_str(Token **next, std::string str);
-  Token *expect_token_with_type(Token **next, Error &err, TokenType type);
+  Token *expect_token_with_type(Token **next, PError &err, TokenType type);
   Token *consume_token_with_type(Token **next, TokenType type);
   Token *consume_token_with_indents(Token **next, int indents);
-  Token *expect_token_with_indents(Token **next, Error &err, int indents);
+  Token *expect_token_with_indents(Token **next, PError &err, int indents);
 }
 #endif

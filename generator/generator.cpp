@@ -1,80 +1,28 @@
 #include "./generator.hpp"
 
 namespace generator {
-  bool sd_dfs(int dfs_id,
-              std::string &node,
-              std::map<std::string, std::shared_ptr<ASTStructDef>> &nodes,
-              std::map<std::string, int> &visited,
-              std::vector<std::shared_ptr<ASTStructDef>> &ordered_sds) {
-    auto it = visited.find(node);
-    if (it == visited.end()) {
-      assert(false);
-      return false;
-    }
-    if (it->second == dfs_id) {
-      assert(false);
-      return false;
-    }
-    if (it->second) return true;
-    it->second = dfs_id;
-    for (std::shared_ptr<ASTSimpleDeclaration> next: nodes.at(node)->declarations) {
-      std::shared_ptr<ASTTypeSpec> type_spec = next->type_spec;
-      while (type_spec->op->type == KwArray) type_spec = type_spec->of;
-      if (type_spec->op->type != KwStruct) continue;
-      if (!sd_dfs(dfs_id,
-                 type_spec->s_name,
-                 nodes,
-                 visited,
-                 ordered_sds)) return false;
-    }
-    ordered_sds.push_back(nodes.at(node));
-    return true;
-  }
-  std::vector<std::shared_ptr<ASTStructDef>> sd_dag_loop_chk(std::vector<std::shared_ptr<ASTStructDef>> &sds) {
-    std::vector<std::shared_ptr<ASTStructDef>> ret;
-    std::map<std::string, std::shared_ptr<ASTStructDef>> nodes;
-    std::map<std::string, int> visited;
-    for (std::shared_ptr<ASTStructDef> sd: sds) {
-      std::string name = std::string(sd->declarator->op->sv);
-      nodes.insert({name, sd});
-      visited.insert({name, 0});
-    }
-    for (int i = 1; i <= (int)sds.size(); i++) {
-      std::string name = std::string(sds[i-1]->declarator->op->sv);
-      if(!sd_dfs(i, name, nodes, visited, ret)) {
-        assert(false);
-        return {};
-      }
-    }
-    return ret;
-  }
-  bool init_generator(std::shared_ptr<ASTTranslationUnit> tu, std::shared_ptr<Context> ctx) {
+  bool init_generator(std::shared_ptr<ASTTranslationUnit> tu, std::shared_ptr<Context> ctx, GError &err) {
     std::vector<std::shared_ptr<ASTStructDef>> sds;
     for (std::shared_ptr<AST> d: tu->external_declarations) {
       if (typeid(*d) == typeid(ASTStructDef)) {
         sds.push_back(std::dynamic_pointer_cast<ASTStructDef>(d));
       }
     }
-    std::vector<std::shared_ptr<ASTStructDef>> ordered_sds = sd_dag_loop_chk(sds);
-    if (ordered_sds.size() != sds.size()) {
-      assert(false);
-      return false;
-    }
-    if (!ctx->create_and_add_struct_types(ordered_sds)) {
-      assert(false);
-      return false;
-    }
+    std::vector<std::shared_ptr<ASTStructDef>> ordered_sds = is_dag(sds, err);
+    if (ordered_sds.size() != sds.size()) return false;
+    if (!ctx->create_and_add_struct_types(ordered_sds, err)) return false;
     for (std::shared_ptr<AST> d: tu->external_declarations) {
       if (typeid(*d) == typeid(ASTFuncDef)) {
         std::shared_ptr<ASTFuncDef> n = std::dynamic_pointer_cast<ASTFuncDef>(d);
         std::shared_ptr<ASTFuncDeclaration> fd = n->declaration;
-        std::shared_ptr<TypeFunc> tf = ctx->create_func_type(fd);
-        if (!tf) {
-          assert(false);
-          return false;
-        }
+        std::shared_ptr<TypeFunc> tf = ctx->create_func_type(fd, err);
+        if (!tf) return false;
         if (fd->declarator->args.size() > 6) {
-          assert(false);
+          err = GError(
+            "the maximum number of args is 6, but it is " +
+            std::to_string(fd->declarator->args.size()),
+            fd->declarator->op
+          );
           return false;
         }
         ctx->add_func(std::string(fd->declarator->declarator->op->sv), tf);
@@ -83,32 +31,30 @@ namespace generator {
     }
     return true;
   }
-  void generate_text_section(std::shared_ptr<AST> ast, std::shared_ptr<Context> ctx, std::string &code) {
+  bool generate_text_section(std::shared_ptr<AST> ast, std::shared_ptr<Context> ctx, std::string &code, GError &err) {
     if (typeid(*ast) == typeid(ASTTranslationUnit)) {
       std::shared_ptr<ASTTranslationUnit> n = std::dynamic_pointer_cast<ASTTranslationUnit>(ast);
-      init_generator(n, ctx);
+      if (!init_generator(n, ctx, err)) return false;
       code += ".intel_syntax noprefix\n"; // use intel syntax
       code += ".text\n"; // text section
       code += ".global main\n";
       for (std::shared_ptr<AST> d: n->external_declarations) {
-        generate_text_section(d, ctx, code);
+        if (!generate_text_section(d, ctx, code, err)) return false;
       }
-      return;
+      return true;
     }
     // declaration-spec simple-declarators
     if (typeid(*ast) == typeid(ASTExternalDeclaration)) {
       std::shared_ptr<ASTExternalDeclaration> n = std::dynamic_pointer_cast<ASTExternalDeclaration>(ast);
-      std::shared_ptr<EvalType> type = ctx->create_type(n->declaration_spec);
-      if (!type) {
-        assert(false);
-      }
+      std::shared_ptr<EvalType> type = ctx->create_type(n->declaration_spec, err);
+      if (!type) return false;
       for (std::shared_ptr<ASTDeclarator> d: n->declarators) {
         ctx->add_global_var(std::string(d->op->sv), type);
       }
-      return;
+      return true;
     }
     if (typeid(*ast) == typeid(ASTStructDef)) {
-      return;
+      return true;
     }
     if (typeid(*ast) == typeid(ASTFuncDef)) {
       std::shared_ptr<ASTFuncDef> n = std::dynamic_pointer_cast<ASTFuncDef>(ast);
@@ -129,31 +75,37 @@ namespace generator {
           f->type->type_args[i]
         );
       }
-      generate_text_section(n->body, ctx, code);
+      if (!generate_text_section(n->body, ctx, code, err)) return false;
       ctx->end_scope();
       ret(code);
-      return;
+      return true;
     }
     if (typeid(*ast) == typeid(ASTDeclaration)) {
       std::shared_ptr<ASTDeclaration> n = std::dynamic_pointer_cast<ASTDeclaration>(ast);
-      std::shared_ptr<EvalType> type = ctx->create_type(n->declaration_spec);
-      if (!type) {
-        assert(false);
-      }
+      std::shared_ptr<EvalType> type = ctx->create_type(n->declaration_spec, err);
+      if (!type) return false;
       for (std::shared_ptr<ASTDeclarator> d: n->declarators) {
         code += "sub rsp, " + std::to_string(align_8(type->size)) + "\n";
         ctx->rsp -= align_8(type->size);
         ctx->add_local_var(std::string(d->op->sv), type);
       }
-      return;
+      return true;
     }
     if (typeid(*ast) == typeid(ASTIfStmt)) {
       std::shared_ptr<ASTIfStmt> n = std::dynamic_pointer_cast<ASTIfStmt>(ast);
       std::string false_label = create_label();
       std::string end_label = create_label();
-      generate_text_section(n->cond, ctx, code);
-      if (typeid(*n->cond->eval_type) == typeid(TypeArray)) {
-        assert(false);
+      if (!generate_text_section(n->cond, ctx, code, err)) return false;
+      if (
+        typeid(*n->cond->eval_type) == typeid(TypeArray) ||
+        typeid(*n->cond->eval_type) == typeid(TypeStruct)
+      ) {
+        err = GError(
+          n->cond->eval_type->to_string() +
+          " cannot be evaluated as bool",
+          n->op
+        );
+        return false;
       }
       ctx->rsp += 8;
       code += "pop r10\n";
@@ -161,20 +113,31 @@ namespace generator {
       code += "cmp r10, 0\n";
       code += "setnz r10b\n";
       code += "jz " + false_label + "\n";
-      generate_text_section(n->true_stmt, ctx, code);
+      if (!generate_text_section(n->true_stmt, ctx, code, err)) return false;
       code += "jmp " + end_label + "\n";
       code += false_label + ":\n";
-      if (n->false_stmt) generate_text_section(n->false_stmt, ctx, code);
+      if (n->false_stmt) {
+        if (!generate_text_section(n->false_stmt, ctx, code, err)) return false;
+      }
       code += end_label + ":\n";
+      return true;
     }
     if (typeid(*ast) == typeid(ASTElseStmt)) {
       std::shared_ptr<ASTElseStmt> n = std::dynamic_pointer_cast<ASTElseStmt>(ast);
       std::string false_label = create_label();
       std::string end_label = create_label();
       if (n->cond) {
-        generate_text_section(n->cond, ctx, code);
-        if (typeid(*n->cond->eval_type) == typeid(TypeArray)) {
-          assert(false);
+        if (!generate_text_section(n->cond, ctx, code, err)) return false;
+        if (
+          typeid(*n->cond->eval_type) == typeid(TypeArray) ||
+          typeid(*n->cond->eval_type) == typeid(TypeStruct)
+        ) {
+          err = GError(
+            n->cond->eval_type->to_string() +
+            " cannot be evaluated as bool",
+            n->op
+          );
+          return false;
         }
         ctx->rsp += 8;
         code += "pop r10\n";
@@ -183,42 +146,47 @@ namespace generator {
         code += "setnz r10b\n";
         code += "jz " + false_label + "\n";
       }
-      generate_text_section(n->true_stmt, ctx, code);
+      if (!generate_text_section(n->true_stmt, ctx, code, err)) return false;
       code += "jmp " + end_label + "\n";
       code += false_label + ":\n";
-      if (n->false_stmt) generate_text_section(n->false_stmt, ctx, code);
+      if (n->false_stmt) {
+        if (!generate_text_section(n->false_stmt, ctx, code, err)) return false;
+      }
       code += end_label + ":\n";
+      return true;
     }
     if (typeid(*ast) == typeid(ASTCompoundStmt)) {
       std::shared_ptr<ASTCompoundStmt> n = std::dynamic_pointer_cast<ASTCompoundStmt>(ast);
       ctx->start_scope();
       int saved_rsp = ctx->rsp;
       for (std::shared_ptr<AST> stmt: n->items) {
-        if (typeid(*stmt) == typeid(ASTDeclaration)) generate_text_section(stmt, ctx, code);
+        if (typeid(*stmt) == typeid(ASTDeclaration)) {
+          if (!generate_text_section(stmt, ctx, code, err)) return false;
+        }
       }
       for (std::shared_ptr<AST> stmt: n->items) {
         if (typeid(*stmt) == typeid(ASTDeclaration)) continue;
-        generate_text_section(stmt, ctx, code);
+        if (!generate_text_section(stmt, ctx, code, err)) return false;
       }
       ctx->rsp = saved_rsp;
       code += "lea rsp, [rbp - " + std::to_string(-saved_rsp) + "]\n";
       ctx->end_scope();
-      return;
+      return true;
     }
     if (typeid(*ast) == typeid(ASTExprStmt)) {
       std::shared_ptr<ASTExprStmt> n = std::dynamic_pointer_cast<ASTExprStmt>(ast);
-      generate_text_section(n->expr, ctx, code);
+      if (!generate_text_section(n->expr, ctx, code, err)) return false;
       pop("r10", ctx, code);
-      return;
+      return true;
     }
     if (typeid(*ast) == typeid(ASTReturnStmt)) {
       std::shared_ptr<ASTReturnStmt> n = std::dynamic_pointer_cast<ASTReturnStmt>(ast);
       std::shared_ptr<ASTExpr> expr = std::dynamic_pointer_cast<ASTExpr>(n->expr);
-      generate_text_section(expr, ctx, code);
+      if (!generate_text_section(expr, ctx, code, err)) return false;
       pop("rax", ctx, code);
       eval(expr, "rax", code);
       ret(code);
-      return;
+      return true;
     }
     // if (typeid(*ast) == typeid(ASTBreakStmt)) {
     //   std::string label = ctx->get_loop().label_break;
@@ -242,15 +210,24 @@ namespace generator {
     // }
     if (typeid(*ast) == typeid(ASTAssignExpr)) {
       std::shared_ptr<ASTAssignExpr> n = std::dynamic_pointer_cast<ASTAssignExpr>(ast);
-      generate_text_section(n->right, ctx, code);
-      generate_text_section(n->left, ctx, code);
+      if (!generate_text_section(n->right, ctx, code, err)) return false;
+      if (!generate_text_section(n->left, ctx, code, err)) return false;
+      if (!type_eq(n->left->eval_type, n->right->eval_type)) {
+        err = GError(
+          "cannot assign " + n->right->eval_type->to_string() +
+          " to " + n->left->eval_type->to_string(),
+          n->op
+        );
+        return false;
+      }
       if (!try_assign(n->left, n->right, ctx, code)) {
-        assert(false);
+        err = GError("the left is not assinable", n->op);
+        return false;
       }
 
       n->eval_type = n->left->eval_type;
       n->is_assignable = false;
-      return;
+      return true;
     }
     // if (typeid(*ast) == typeid(ASTLogicalOrExpr)) {}
     // if (typeid(*ast) == typeid(ASTLogicalAndExpr)) {}
@@ -262,15 +239,23 @@ namespace generator {
     // if (typeid(*ast) == typeid(ASTShiftExpr)) {}
     if (typeid(*ast) == typeid(ASTAdditiveExpr)) {
       std::shared_ptr<ASTAdditiveExpr> n = std::dynamic_pointer_cast<ASTAdditiveExpr>(ast);
-      generate_text_section(n->left, ctx, code);
-      generate_text_section(n->right, ctx, code);
+      if (!generate_text_section(n->left, ctx, code, err)) return false;
+      if (!generate_text_section(n->right, ctx, code, err)) return false;
       if (typeid(*n->left->eval_type) != typeid(TypeNum)) {
-        // TODO error
-        assert(false);
+        err = GError(
+          "the operator is not avalilable with " +
+          n->left->eval_type->to_string(),
+          n->op
+        );
+        return false;
       }
       if (typeid(*n->right->eval_type) != typeid(TypeNum)) {
-        // TODO error
-        assert(false);
+        err = GError(
+          "the operator is not avalilable with " +
+          n->right->eval_type->to_string(),
+          n->op
+        );
+        return false;
       }
       pop("r11", ctx, code);
       pop("r10", ctx, code);
@@ -281,19 +266,27 @@ namespace generator {
       push("r10", ctx, code);
       n->eval_type = n->left->eval_type;
       n->is_assignable = false;
-      return;
+      return true;
     }
     if (typeid(*ast) == typeid(ASTMultiplicativeExpr)) {
       std::shared_ptr<ASTMultiplicativeExpr> n = std::dynamic_pointer_cast<ASTMultiplicativeExpr>(ast);
-      generate_text_section(n->left, ctx, code);
-      generate_text_section(n->right, ctx, code);
+      if (!generate_text_section(n->left, ctx, code, err)) return false;
+      if (!generate_text_section(n->right, ctx, code, err)) return false;
       if (typeid(*n->left->eval_type) != typeid(TypeNum)) {
-        // TODO error
-        assert(false);
+        err = GError(
+          "the operator is not avalilable with " +
+          n->left->eval_type->to_string(),
+          n->op
+        );
+        return false;
       }
       if (typeid(*n->right->eval_type) != typeid(TypeNum)) {
-        // TODO error
-        assert(false);
+        err = GError(
+          "the operator is not avalilable with " +
+          n->right->eval_type->to_string(),
+          n->op
+        );
+        return false;
       }
       pop("r11", ctx, code);
       pop("r10", ctx, code);
@@ -304,17 +297,19 @@ namespace generator {
       push("r10", ctx, code);
       n->eval_type = n->left->eval_type;
       n->is_assignable = false;
-      return;
+      return true;
     }
     if (typeid(*ast) == typeid(ASTUnaryExpr)) {
       std::shared_ptr<ASTUnaryExpr> n = std::dynamic_pointer_cast<ASTUnaryExpr>(ast);
-      generate_text_section(n->expr, ctx, code);
+      if (!generate_text_section(n->expr, ctx, code, err)) return false;
       if (n->op->sv == "*") {
         if (!n->expr->is_assignable) {
-          assert(false);
+          err = GError("cannot derefer unassignable expr", n->op);
+          return false;
         }
         if (typeid(*n->expr->eval_type) != typeid(TypePtr)) {
-          assert(false);
+          err = GError("cannot derefer non-pointer expr", n->op);
+          return false;
         }
         pop("r10", ctx, code);
         eval(n->expr, "r10", code);
@@ -322,39 +317,59 @@ namespace generator {
         std::shared_ptr<TypePtr> expr_type = std::dynamic_pointer_cast<TypePtr>(n->expr->eval_type);
         n->eval_type = expr_type->of;
         n->is_assignable = true;
-        return;
+        return true;
       }
       if (n->op->sv == "&") {
         if (!n->expr->is_assignable) {
-          assert(false);
+          err = GError("cannot refer unassignable expr", n->op);
+          return false;
         }
         n->eval_type = std::make_shared<TypePtr>(n->expr->eval_type);
         n->is_assignable = false;
-        return;
+        return true;
       }
       assert(false);
+      return false;
     }
     if (typeid(*ast) == typeid(ASTFuncCallExpr)) {
       std::shared_ptr<ASTFuncCallExpr> n = std::dynamic_pointer_cast<ASTFuncCallExpr>(ast);
-      generate_text_section(n->primary, ctx, code);
+      if (!generate_text_section(n->primary, ctx, code, err)) return false;
       if (typeid(*n->primary->eval_type) != typeid(TypeFunc)) {
-        // TODO error
-        assert(false);
+        err = GError(
+          n->primary->eval_type->to_string() +
+          " is not function-call-expr",
+          n->op
+        );
+        return false;
       }
       if (n->args.size() > 6) {
-        assert(false);
+        err = GError(
+          "the maximum number of args is 6, but it is " +
+          std::to_string(n->args.size()),
+          n->op
+        );
+        return false;
       }
       std::shared_ptr<TypeFunc> tf = std::dynamic_pointer_cast<TypeFunc>(n->primary->eval_type);
-      for (int i=0; i < (int)n->args.size(); i++) generate_text_section(n->args[i], ctx, code);
+      for (int i=0; i < (int)n->args.size(); i++) {
+        if (!generate_text_section(n->args[i], ctx, code, err)) return false;
+      }
       if (typeid(*tf->ret_type) != typeid(TypeAny)) {
         if (n->args.size() != tf->type_args.size()) {
-          // TODO error
-          assert(false);
+          err = GError(
+            "the type of function is " + tf->to_string() +
+            ", but the number of args is " + std::to_string(n->args.size()),
+            n->op
+          );
+          return false;
         }
         for (int i=0; i < (int)n->args.size(); i++) {
           if (!type_eq(n->args[i]->eval_type, tf->type_args[i])) {
-            // TODO error
-            assert(false);
+            err = GError(
+              "the type of function is " + tf->to_string(),
+              n->op
+            );
+            return false;
           }
         }
       }
@@ -370,19 +385,26 @@ namespace generator {
       push("rax", ctx, code);
       n->eval_type = tf->ret_type;
       n->is_assignable = false;
-      return;
+      return true;
     }
     if (typeid(*ast) == typeid(ASTArrayAccessExpr)) {
       std::shared_ptr<ASTArrayAccessExpr> n = std::dynamic_pointer_cast<ASTArrayAccessExpr>(ast);
-      generate_text_section(n->primary, ctx, code);
+      if (!generate_text_section(n->primary, ctx, code, err)) return false;
       if (typeid(*n->primary->eval_type) != typeid(TypeArray)) {
-        // TODO error
-        assert(false);
+        err = GError(
+          n->primary->eval_type->to_string() + " is not array",
+          n->op
+        );
+        return false;
       }
       std::shared_ptr<TypeArray> a = std::dynamic_pointer_cast<TypeArray>(n->primary->eval_type);
-      generate_text_section(n->expr, ctx, code);
+      if (!generate_text_section(n->expr, ctx, code, err)) return false;
       if (typeid(*n->expr->eval_type) != typeid(TypeNum)) {
-        assert(false);
+        err = GError(
+          n->expr->eval_type->to_string() + " is not num",
+          n->op
+        );
+        return false;
       }
       pop("r11", ctx, code);
       eval(n->expr, "r11", code);
@@ -392,33 +414,41 @@ namespace generator {
       push("r10", ctx, code);
       n->eval_type = a->of;
       n->is_assignable = true;
-      return;
+      return true;
     }
     if (typeid(*ast) == typeid(ASTStructAccessExpr)) {
       std::shared_ptr<ASTStructAccessExpr> n = std::dynamic_pointer_cast<ASTStructAccessExpr>(ast);
-      generate_text_section(n->primary, ctx, code);
+      if (!generate_text_section(n->primary, ctx, code, err)) return false;
       if (typeid(*n->primary->eval_type) != typeid(TypeStruct)) {
-        // TODO error
-        assert(false);
+        err = GError(
+          "cannot solve this access because " +
+          n->primary->eval_type->to_string() + " is not struct",
+          n->op
+        );
+        return false;
       }
       std::shared_ptr<TypeStruct> s = std::dynamic_pointer_cast<TypeStruct>(n->primary->eval_type);
       std::pair<int, std::shared_ptr<EvalType>> m = s->get_member(n->op->sv);
       if (!m.second) {
-        assert(false);
+        err = GError(
+          "cannot find member " + std::string(n->op->sv),
+          n->op
+        );
+        return false;
       }
       pop("r10", ctx, code);
       code += "add r10, " + std::to_string(m.first) + "\n";
       push("r10", ctx, code);
       n->eval_type = m.second;
       n->is_assignable = true;
-      return;
+      return true;
     }
     if (typeid(*ast) == typeid(ASTPrimaryExpr)) {
       std::shared_ptr<ASTPrimaryExpr> n = std::dynamic_pointer_cast<ASTPrimaryExpr>(ast);
-      generate_text_section(n->expr, ctx, code);
+      if (!generate_text_section(n->expr, ctx, code, err)) return false;
       n->eval_type = n->expr->eval_type;
       n->is_assignable = n->expr->is_assignable;
-      return;
+      return true;
     }
     if (typeid(*ast) == typeid(ASTSimpleExpr)) {
       std::shared_ptr<ASTSimpleExpr> n = std::dynamic_pointer_cast<ASTSimpleExpr>(ast);
@@ -429,7 +459,7 @@ namespace generator {
           push("r10", ctx, code);
           n->eval_type = lv->type;
           n->is_assignable = true;
-          return;
+          return true;
         }
         std::shared_ptr<GlobalVar> gv = ctx->get_global_var(n->op->sv);
         if (gv) {
@@ -437,7 +467,7 @@ namespace generator {
           push("r10", ctx, code);
           n->eval_type = gv->type;
           n->is_assignable = true;
-          return;
+          return true;
         }
         std::shared_ptr<Func> f = ctx->get_func(n->op->sv);
         if (f) {
@@ -445,20 +475,20 @@ namespace generator {
           push("r10", ctx, code);
           n->eval_type = f->type;
           n->is_assignable = false;
-          return;
+          return true;
         }
         // TODO get extern
         code += "mov r10, [rip + " + std::string(n->op->sv) + "@GOTPCREL]\n";
         push("r10", ctx, code);
         n->eval_type = std::make_shared<TypeFunc>(std::make_shared<TypeAny>());
         n->is_assignable = false;
-        return;
+        return true;
       } else if (n->op->type == NumberConstant) {
         code += "mov r10, " + std::string(n->op->sv) + "\n";
         push("r10", ctx, code);
         n->eval_type = std::make_shared<TypeNum>();
         n->is_assignable = false;
-        return;
+        return true;
       } else if (n->op->type == StringLiteral) {
         std::string label = create_label();
         get_str_addr("r10", label, code);
@@ -468,10 +498,13 @@ namespace generator {
           std::make_shared<TypeChar>(), string_literal_length(n->op->sv)
         );
         n->is_assignable = true;
-        return;
+        return true;
       }
       assert(false);
+      return false;
     }
+    assert(false);
+    return false;
   }
 
   void generate_data_section(std::shared_ptr<Context> ctx, std::string &code) {
@@ -491,10 +524,10 @@ namespace generator {
     }
   }
 
-  std::string generate(std::shared_ptr<AST> ast) {
+  std::string generate(std::shared_ptr<AST> ast, GError &err) {
     std::string ret;
     std::shared_ptr<Context> context = std::make_shared<Context>();
-    generate_text_section(ast, context, ret);
+    if (!generate_text_section(ast, context, ret, err)) return "";
     generate_data_section(context, ret);
     return ret;
   }

@@ -1,6 +1,62 @@
 # L4T Compiler
 The compiler for L4T, which is the original programming language.
 
+# TODO
+- [x] グローバル変数
+- [x] 関数
+  - [x] 関数定義
+  - [x] 関数呼び出し
+- [x] ローカル変数
+- [ ] 配列
+  - [x] 添え字アクセス
+  - [ ] 配列の初期化
+  - [x] 文字列を使った初期化
+  - [x] 配列の値渡し
+- [ ] 構造体
+  - [x] メンバへのアクセス
+  - [x] 構造体のメンバに他の構造体が含まれている場合に引き起こされ得る，構造体サイズ決定不可の判定
+  - [ ] 構造体の初期化
+  - [x] 構造体の値渡し
+- [x] アドレス処理
+  - [x] ポインタ，関数ポインタ
+  - [x] 参照
+- [x] if-else文
+- [ ] 繰り返し文
+  - [ ] loop文
+  - [ ] continue文
+  - [ ] break文
+- [ ] typeof
+- [ ] static
+- [ ] マクロ
+- [ ] セキュアコーディング
+  - [x] 厳格な型システム．`ptr<num>`，`array<num>[2]`，`&array<num>[2]`，`&array<num>[3]`，`&array<array<num>[2]>[2]`などは全て別の型として解析され，暗黙的な変換を許さない．
+  - [ ] ポインタ変数には，自身よりライフタイムが大きい変数のアドレスしか代入できないようにする．
+  - [ ] extern "C" any ???? (libcから持ってくるものは全てany型)
+  - [ ] ブロックにunsafe属性を設け，型Anyはunsafeブロック内にしか存在できないようにする．
+- [x] 賢く分かりやすいエラー出力
+  - [x] parserからの分かりやすいエラー出力
+  - [x] generatorからの分かりやすいエラー出力
+- 各種2項演算
+  - [x] +
+  - [x] -
+  - [ ] *
+  - [ ] /
+  - [ ] %
+  - [ ] &
+  - [ ] |
+  - [ ] ^
+  - [ ] &&
+  - [ ] ||
+  - [ ] <
+  - [ ] >
+  - [ ] >=
+  - [ ] <=
+  - [ ] !=
+  - [ ] =
+- 各種単項演算
+  - [ ] -
+  - [ ] ~
+
 ## Abstract
 ### Variable
 Variable declarations can be both in local and in global. Available types are `num`, `char`, `array<>[]`, `ptr<>`, `funcptr`, `any`.
@@ -135,32 +191,6 @@ The output will be
 300
 -100
 ```
-
-## TODO
-- [x] 関数定義
-- [x] 関数呼び出し
-- [x] if-else文
-- [ ] loop文
-- [x] ローカル変数
-- [x] グローバル変数
-- [x] parserからのエラー出力
-- [ ] generatorからのエラー出力
-- [x] 配列(文字列を含む)
-- [ ] 配列の初期化
-- [x] 配列の値渡し
-- [ ] 構造体
-- [x] 構造体の値渡し
-- [ ] 構造体の初期化
-- [x] ポインタ，関数ポインタ
-- [x] 参照
-- [x] 厳格な型システム．`ptr<num>`，`array<num>[2]`，`&array<num>[2]`，`&array<num>[3]`，`&array<array<num>[2]>[2]`などは全て別の型として解析され，暗黙的な変換を許さない．
-- [ ] typeof
-- [ ] ポインタ変数には，自身よりライフタイムが大きい変数のアドレスしか代入できないようにする．
-- [ ] extern "C" func ????
-- [x] libcの関数からの返り値の型はAny
-- [ ] ブロックにunsafe属性を設け，型Anyはunsafeブロック内にしか存在できないようにする．
-- [ ] static
-- [ ] マクロ
 
 ## Grammer
 ```

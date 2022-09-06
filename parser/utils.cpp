@@ -1,13 +1,15 @@
 #include "./parser.hpp"
 
 namespace parser {
-  tokenizer::Token *expect_token_with_str(tokenizer::Token **next, Error &err, std::string str) {
+  tokenizer::Token *expect_token_with_str(tokenizer::Token **next, PError &err, std::string str) {
     if (!*next) {
-      err = Error(str, "EOF", *next);
+      err = PError(str, "EOF", *next);
       return NULL;
     }
     if ((*next)->sv != str) {
-      err = Error(str, std::string((*next)->sv), *next);
+      if (str == "\n") str = "LF";
+      if ((*next)->sv == "\n") err = PError(str, "LF", *next);
+      else err = PError(str, std::string((*next)->sv), *next);
       return NULL;
     }
     tokenizer::Token *ret = *next;
@@ -23,13 +25,13 @@ namespace parser {
     return ret;
   }
 
-  tokenizer::Token *expect_token_with_type(tokenizer::Token **next, Error &err, tokenizer::TokenType type) {
+  tokenizer::Token *expect_token_with_type(tokenizer::Token **next, PError &err, tokenizer::TokenType type) {
     if (!*next) {
-      err = Error("type " + tokenizer::to_ast_string(type), "EOF", *next);
+      err = PError("type " + tokenizer::to_ast_string(type), "EOF", *next);
       return NULL;
     }
     if ((*next)->type != type) {
-      err = Error(
+      err = PError(
         "type " + tokenizer::to_ast_string(type),
         "type " + tokenizer::to_ast_string((*next)->type), *next
       );

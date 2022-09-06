@@ -70,19 +70,16 @@ namespace generator {
     if (typeid(*x) == typeid(TypeAny) || typeid(*y) == typeid(TypeAny)) return true;
     if (typeid(*x) != typeid(*y)) return false;
     if (typeid(*x) == typeid(TypeArray)) {
-      assert(typeid(*y) == typeid(TypeArray));
       std::shared_ptr<TypeArray> xx = std::dynamic_pointer_cast<TypeArray>(x);
       std::shared_ptr<TypeArray> yy = std::dynamic_pointer_cast<TypeArray>(y);
       return xx->size == yy->size && type_eq(xx->of, yy->of);
     }
     if (typeid(*x) == typeid(TypePtr)) {
-      assert(typeid(*y) == typeid(TypePtr));
       std::shared_ptr<TypePtr> xx = std::dynamic_pointer_cast<TypePtr>(x);
       std::shared_ptr<TypePtr> yy = std::dynamic_pointer_cast<TypePtr>(y);
       return type_eq(xx->of, yy->of);
     }
     if (typeid(*x) == typeid(TypeFunc)) {
-      assert(typeid(*y) == typeid(TypeFunc));
       std::shared_ptr<TypeFunc> xx = std::dynamic_pointer_cast<TypeFunc>(x);
       std::shared_ptr<TypeFunc> yy = std::dynamic_pointer_cast<TypeFunc>(y);
       if (xx->type_args.size() != yy->type_args.size()) return false;
@@ -93,7 +90,6 @@ namespace generator {
       return ret;
     }
     if (typeid(*x) == typeid(TypeStruct)) {
-      assert(typeid(*y) == typeid(TypeStruct));
       std::shared_ptr<TypeStruct> xx = std::dynamic_pointer_cast<TypeStruct>(x);
       std::shared_ptr<TypeStruct> yy = std::dynamic_pointer_cast<TypeStruct>(y);
       return xx->name == yy->name;
@@ -104,7 +100,6 @@ namespace generator {
   bool try_assign(std::shared_ptr<ASTExpr> l, std::shared_ptr<ASTExpr> r,
                   std::shared_ptr<Context> ctx, std::string &code) {
     if (!l->is_assignable) return false;
-    if (!type_eq(l->eval_type, r->eval_type)) return false;
     pop("r10", ctx, code);
     pop("r11", ctx, code);
     if (typeid(*l->eval_type) == typeid(TypeArray)) {
@@ -162,5 +157,61 @@ namespace generator {
     }
     code += "mov [rbp - " + std::to_string(-ctx->rsp) + "], " + param_reg_names[i] + "\n";
     return;
+  }
+  bool dfs(int dfs_id,
+           std::string_view node,
+           std::map<std::string_view, std::shared_ptr<ASTStructDef>> &nodes,
+           std::map<std::string_view, int> &visited,
+           std::vector<std::shared_ptr<ASTStructDef>> &ordered_sds,
+           GError &err) {
+    auto it = visited.find(node);
+    std::shared_ptr<ASTStructDef> now = nodes.at(node);
+    if (it->second == dfs_id) {
+      err.message = "";
+      return false;
+    }
+    if (it->second) return true;
+    it->second = dfs_id;
+    for (std::shared_ptr<ASTSimpleDeclaration> next: now->declarations) {
+      std::shared_ptr<ASTTypeSpec> type_spec = next->type_spec;
+      while (type_spec->op->type == KwArray) type_spec = type_spec->of;
+      if (type_spec->op->type != KwStruct) continue;
+      if (visited.find(type_spec->s->sv) == visited.end()) {
+        err = GError(
+          std::string(type_spec->s->sv) + " is not defined",
+          type_spec->s
+        );
+        return false;
+      }
+      if (!dfs(dfs_id,
+               type_spec->s->sv,
+               nodes,
+               visited,
+               ordered_sds,
+               err)) {
+        if (!err.message.size()) {
+          err = GError(
+            "cannot determine size of struct " +
+            std::string(node), type_spec->s
+          );
+        }
+        return false;
+      }
+    }
+    ordered_sds.push_back(now);
+    return true;
+  }
+  std::vector<std::shared_ptr<ASTStructDef>> is_dag(std::vector<std::shared_ptr<ASTStructDef>> &sds, GError &err) {
+    std::vector<std::shared_ptr<ASTStructDef>> ret;
+    std::map<std::string_view, std::shared_ptr<ASTStructDef>> nodes;
+    std::map<std::string_view, int> visited;
+    for (std::shared_ptr<ASTStructDef> sd: sds) {
+      nodes.insert({sd->declarator->op->sv, sd});
+      visited.insert({sd->declarator->op->sv, 0});
+    }
+    for (int i = 1; i <= (int)sds.size(); i++) {
+      if(!dfs(i, sds[i-1]->declarator->op->sv, nodes, visited, ret, err)) return {};
+    }
+    return ret;
   }
 }

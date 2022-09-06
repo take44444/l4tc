@@ -112,16 +112,16 @@ namespace tokenizer {
              ('0' <= p[len] && p[len] <= '9')) len++;
       Token *ret = new Token(line, src, p, len, Ident);
       if (ret->sv == "array") ret->type = KwArray;            // array
-      else if (ret->sv == "break") ret->type = KwBreak;       // break
+      // else if (ret->sv == "break") ret->type = KwBreak;       // break
       else if (ret->sv == "char") ret->type = KwChar;         // char
-      else if (ret->sv == "continue") ret->type = KwContinue; // continue
+      // else if (ret->sv == "continue") ret->type = KwContinue; // continue
       else if (ret->sv == "elif") ret->type = KwElif;         // elif
       else if (ret->sv == "else") ret->type = KwElse;         // else
       else if (ret->sv == "func") ret->type = KwFunc;         // func
       else if (ret->sv == "funcptr") ret->type = KwFuncptr;   // funcptr
       else if (ret->sv == "if") ret->type = KwIf;             // if
-      else if (ret->sv == "loop") ret->type = KwLoop;         // loop
-      else if (ret->sv == "nullptr") ret->type = KwNullptr;   // nullptr
+      // else if (ret->sv == "loop") ret->type = KwLoop;         // loop
+      // else if (ret->sv == "nullptr") ret->type = KwNullptr;   // nullptr
       else if (ret->sv == "num") ret->type = KwNum;           // num
       else if (ret->sv == "ptr") ret->type = KwPtr;           // ptr
       else if (ret->sv == "return") ret->type = KwReturn;     // return
@@ -134,25 +134,25 @@ namespace tokenizer {
       if (p[len] != '"') return new Token(line, src, p, len, Unknown);
       return new Token(line, src, p, ++len, StringLiteral);
     }
-    if ('!' == *p && p[1] == '=') {
-      return new Token(line, src, p, 2, Punctuator);                         // !=
-    }
+    // if ('!' == *p && p[1] == '=') {
+    //   return new Token(line, src, p, 2, Punctuator);                         // !=
+    // }
     if ('&' == *p) {
-      if (p[1] == '&') return new Token(line, src, p, 2, Punctuator);        // &&
+      // if (p[1] == '&') return new Token(line, src, p, 2, Punctuator);        // &&
       return new Token(line, src, p, 1, Punctuator);                         // &
     }
-    if ('|' == *p) {
-      if (p[1] == '|') return new Token(line, src, p, 2, Punctuator);        // ||
-      return new Token(line, src, p, 2, Punctuator);                         // |
-    }
-    if ('<' == *p) {
-      if (p[1] == '=') return new Token(line, src, p, 2, Punctuator);        // <=
-      return new Token(line, src, p, 1, Punctuator);                         // <
-    }
-    if ('>' == *p) {
-      if (p[1] == '=') return new Token(line, src, p, 2, Punctuator);        // >=
-      return new Token(line, src, p, 1, Punctuator);                         // >
-    }
+    // if ('|' == *p) {
+    //   if (p[1] == '|') return new Token(line, src, p, 2, Punctuator);        // ||
+    //   return new Token(line, src, p, 2, Punctuator);                         // |
+    // }
+    // if ('<' == *p) {
+    //   if (p[1] == '=') return new Token(line, src, p, 2, Punctuator);        // <=
+    //   return new Token(line, src, p, 1, Punctuator);                         // <
+    // }
+    // if ('>' == *p) {
+    //   if (p[1] == '=') return new Token(line, src, p, 2, Punctuator);        // >=
+    //   return new Token(line, src, p, 1, Punctuator);                         // >
+    // }
     if ('-' == *p) {
       if (p[1] == '>') return new Token(line, src, p, 2, Punctuator);        // ->
       return new Token(line, src, p, 1, Punctuator);                         // -
@@ -171,10 +171,10 @@ namespace tokenizer {
       }
       return new Token(line, src, p, len, Punctuator);
     }
-    if (':' == *p || '=' == *p ||
-        '^' == *p || '~' == *p ||
+    if (':' == *p ||
+        // '^' == *p || '~' == *p || '=' == *p ||
         '+' == *p ||
-        '/' == *p || '*' == *p || '%' == *p ||
+        // '/' == *p || '*' == *p || '%' == *p ||
         '(' == *p || ')' == *p ||
         '[' == *p || ']' == *p || '.' == *p ||
         ',' == *p) {
