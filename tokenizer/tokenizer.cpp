@@ -157,6 +157,9 @@ namespace tokenizer {
       if (p[1] == '>') return new Token(line, src, p, 2, Punctuator);        // ->
       return new Token(line, src, p, 1, Punctuator);                         // -
     }
+    if ('\r' == *p) {
+      return new Token(line, src, p, 1, Delimiter);
+    }
     if ('\n' == *p) {
       line++;
       if ('\n' == p[1]) return new Token(line-1, src, p, 1, Delimiter);
