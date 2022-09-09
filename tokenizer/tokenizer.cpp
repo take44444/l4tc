@@ -162,6 +162,7 @@ namespace tokenizer {
     }
     if ('\n' == *p) {
       line++;
+      if ('\r' == p[1] && '\n' == p[2]) return new Token(line-1, src, p, 1, Delimiter);
       if ('\n' == p[1]) return new Token(line-1, src, p, 1, Delimiter);
       return new Token(line-1, src, p, 1, Punctuator);
     }
