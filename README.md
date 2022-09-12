@@ -36,7 +36,7 @@ The compiler for L4T, which is the original programming language.
 - [x] 賢く分かりやすいエラー出力
   - [x] parserからの分かりやすいエラー出力
   - [x] generatorからの分かりやすいエラー出力
-- 各種2項演算
+- [ ] 各種2項演算
   - [x] +
   - [x] -
   - [x] *
@@ -53,7 +53,7 @@ The compiler for L4T, which is the original programming language.
   - [x] <=
   - [x] !=
   - [x] =
-- 各種単項演算
+- [ ] 各種単項演算
   - [ ] -
   - [ ] ~
 
