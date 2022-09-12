@@ -21,17 +21,17 @@ The compiler for L4T, which is the original programming language.
   - [x] ポインタ，関数ポインタ
   - [x] 参照
 - [x] if-else文
-- [ ] 繰り返し文
-  - [ ] loop文
-  - [ ] continue文
-  - [ ] break文
+- [x] 繰り返し文
+  - [x] loop文
+  - [x] continue文
+  - [x] break文
 - [ ] typeof
 - [ ] static
 - [ ] マクロ
 - [ ] セキュアコーディング
   - [x] 厳格な型システム．`ptr<num>`，`array<num>[2]`，`&array<num>[2]`，`&array<num>[3]`，`&array<array<num>[2]>[2]`などは全て別の型として解析され，暗黙的な変換を許さない．
   - [ ] ポインタ変数には，自身よりライフタイムが大きい変数のアドレスしか代入できないようにする．
-  - [ ] ffi "C" ???? (libcから持ってくるものは全てffi型)
+  - [x] ffi "C" ???? (libcから持ってくるものは全てffi型)
   - [ ] ブロックにunsafe属性を設け，ffi型の値はunsafeブロック内にしか存在できないようにする．
 - [x] 賢く分かりやすいエラー出力
   - [x] parserからの分かりやすいエラー出力
@@ -39,20 +39,20 @@ The compiler for L4T, which is the original programming language.
 - 各種2項演算
   - [x] +
   - [x] -
-  - [ ] *
-  - [ ] /
-  - [ ] %
+  - [x] *
+  - [x] /
+  - [x] %
   - [ ] &
   - [ ] |
   - [ ] ^
-  - [ ] &&
-  - [ ] ||
-  - [ ] <
-  - [ ] >
-  - [ ] >=
-  - [ ] <=
-  - [ ] !=
-  - [ ] =
+  - [x] &&
+  - [x] ||
+  - [x] <
+  - [x] >
+  - [x] >=
+  - [x] <=
+  - [x] !=
+  - [x] =
 - 各種単項演算
   - [ ] -
   - [ ] ~
