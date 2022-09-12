@@ -150,12 +150,14 @@ namespace parser {
 
   class ASTLogicalAndExpr : public ASTExpr {
     public:
-    ASTLogicalAndExpr() : ASTExpr() {}
+    Token *op;
+    ASTLogicalAndExpr(Token *t) : ASTExpr(), op(t) {}
   };
 
   class ASTLogicalOrExpr : public ASTExpr {
     public:
-    ASTLogicalOrExpr() : ASTExpr() {}
+    Token *op;
+    ASTLogicalOrExpr(Token *t) : ASTExpr(), op(t) {}
   };
 
   class ASTAssignExpr : public ASTExpr {
@@ -172,18 +174,21 @@ namespace parser {
 
   class ASTBreakStmt : public AST {
     public:
-    ASTBreakStmt() : AST() {}
+    Token *op;
+    ASTBreakStmt(Token *t) : AST(), op(t) {}
   };
 
   class ASTContinueStmt : public AST {
     public:
-    ASTContinueStmt() : AST() {}
+    Token *op;
+    ASTContinueStmt(Token *t) : AST(), op(t) {}
   };
 
   class ASTReturnStmt : public AST {
     public:
+    Token *op;
     std::shared_ptr<AST> expr;
-    ASTReturnStmt() : AST() {}
+    ASTReturnStmt(Token *t) : AST(), op(t) {}
   };
 
   class ASTDeclarator : public AST {
@@ -206,6 +211,12 @@ namespace parser {
     std::shared_ptr<ASTTypeSpec> type_spec;
     std::shared_ptr<ASTDeclarator> declarator;
     ASTSimpleDeclaration() : AST() {}
+  };
+
+  class ASTFfi : public AST {
+    public:
+    std::shared_ptr<ASTDeclarator> declarator;
+    ASTFfi() : AST() {}
   };
 
   class ASTCompoundStmt : public AST {
@@ -232,6 +243,14 @@ namespace parser {
     std::shared_ptr<ASTElseStmt> false_stmt;
     Token *op;
     ASTIfStmt(Token *t) : AST(), cond(nullptr), false_stmt(nullptr), op(t) {}
+  };
+
+  class ASTLoopStmt : public AST {
+    public:
+    std::shared_ptr<ASTExpr> cond;
+    std::shared_ptr<ASTCompoundStmt> true_stmt;
+    Token *op;
+    ASTLoopStmt(Token *t) : AST(), cond(nullptr), op(t) {}
   };
 
   class ASTFuncDeclarator : public AST {

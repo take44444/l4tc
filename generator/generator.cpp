@@ -17,6 +17,20 @@ namespace generator {
         std::shared_ptr<ASTFuncDeclaration> fd = n->declaration;
         std::shared_ptr<TypeFunc> tf = ctx->create_func_type(fd, err);
         if (!tf) return false;
+        if (typeid(*tf->ret_type) == typeid(TypeArray)) {
+          err = GError(
+            "array cannot be return type",
+            fd->declarator->declarator->op
+          );
+          return false;
+        }
+        if (typeid(*tf->ret_type) == typeid(TypeStruct)) {
+          err = GError(
+            "struct cannot be return type",
+            fd->declarator->declarator->op
+          );
+          return false;
+        }
         if (fd->declarator->args.size() > 6) {
           err = GError(
             "the maximum number of args is 6, but it is " +
@@ -53,16 +67,29 @@ namespace generator {
       }
       return true;
     }
+    if (typeid(*ast) == typeid(ASTFfi)) {
+      std::shared_ptr<ASTFfi> n = std::dynamic_pointer_cast<ASTFfi>(ast);
+      ctx->add_ffi(std::string(n->declarator->op->sv));
+      return true;
+    }
     if (typeid(*ast) == typeid(ASTStructDef)) {
       return true;
     }
     if (typeid(*ast) == typeid(ASTFuncDef)) {
       std::shared_ptr<ASTFuncDef> n = std::dynamic_pointer_cast<ASTFuncDef>(ast);
+      if (typeid(*n->body->items.back()) != typeid(ASTReturnStmt)) {
+        err = GError(
+          "missing return statement at the end of function",
+          n->declaration->declarator->declarator->op
+        );
+        return false;
+      }
       std::string func_name = std::string(
         n->declaration->declarator->declarator->op->sv
       );
       std::shared_ptr<Func> f = ctx->get_func(func_name);
       assert(f);
+      ctx->ret_type = f->type->ret_type;
       code += func_name + ":\n";
       code += "push rbp\n";
       code += "mov rbp, rsp\n";
@@ -96,10 +123,8 @@ namespace generator {
       std::string false_label = create_label();
       std::string end_label = create_label();
       if (!generate_text_section(n->cond, ctx, code, err)) return false;
-      if (
-        typeid(*n->cond->eval_type) == typeid(TypeArray) ||
-        typeid(*n->cond->eval_type) == typeid(TypeStruct)
-      ) {
+      if (typeid(*n->cond->eval_type) == typeid(TypeArray) ||
+          typeid(*n->cond->eval_type) == typeid(TypeStruct)) {
         err = GError(
           n->cond->eval_type->to_string() +
           " cannot be evaluated as bool",
@@ -107,11 +132,9 @@ namespace generator {
         );
         return false;
       }
-      ctx->rsp += 8;
-      code += "pop r10\n";
+      pop("r10", ctx, code);
       eval(n->cond, "r10", code);
       code += "cmp r10, 0\n";
-      code += "setnz r10b\n";
       code += "jz " + false_label + "\n";
       if (!generate_text_section(n->true_stmt, ctx, code, err)) return false;
       code += "jmp " + end_label + "\n";
@@ -128,10 +151,8 @@ namespace generator {
       std::string end_label = create_label();
       if (n->cond) {
         if (!generate_text_section(n->cond, ctx, code, err)) return false;
-        if (
-          typeid(*n->cond->eval_type) == typeid(TypeArray) ||
-          typeid(*n->cond->eval_type) == typeid(TypeStruct)
-        ) {
+        if (typeid(*n->cond->eval_type) == typeid(TypeArray) ||
+            typeid(*n->cond->eval_type) == typeid(TypeStruct)) {
           err = GError(
             n->cond->eval_type->to_string() +
             " cannot be evaluated as bool",
@@ -139,12 +160,10 @@ namespace generator {
           );
           return false;
         }
-        ctx->rsp += 8;
-        code += "pop r10\n";
+        pop("r10", ctx, code);
         eval(n->cond, "r10", code);
         code += "cmp r10, 0\n";
-        code += "setnz r10b\n";
-        code += "jz " + false_label + "\n";
+        code += "jnz " + false_label + "\n";
       }
       if (!generate_text_section(n->true_stmt, ctx, code, err)) return false;
       code += "jmp " + end_label + "\n";
@@ -153,6 +172,32 @@ namespace generator {
         if (!generate_text_section(n->false_stmt, ctx, code, err)) return false;
       }
       code += end_label + ":\n";
+      return true;
+    }
+    if (typeid(*ast) == typeid(ASTLoopStmt)) {
+      std::shared_ptr<ASTLoopStmt> n = std::dynamic_pointer_cast<ASTLoopStmt>(ast);
+      std::string loop_label = create_label();
+      std::string end_label = create_label();
+      ctx->start_loop(loop_label, end_label);
+      code += loop_label + ":\n";
+      if (!generate_text_section(n->cond, ctx, code, err)) return false;
+      if (typeid(*n->cond->eval_type) == typeid(TypeArray) ||
+          typeid(*n->cond->eval_type) == typeid(TypeStruct)) {
+        err = GError(
+          n->cond->eval_type->to_string() +
+          " cannot be evaluated as bool",
+          n->op
+        );
+        return false;
+      }
+      pop("r10", ctx, code);
+      eval(n->cond, "r10", code);
+      code += "cmp r10, 0\n";
+      code += "jz " + end_label + "\n";
+      if (!generate_text_section(n->true_stmt, ctx, code, err)) return false;
+      code += "jmp " + loop_label + "\n";
+      code += end_label + ":\n";
+      ctx->end_loop();
       return true;
     }
     if (typeid(*ast) == typeid(ASTCompoundStmt)) {
@@ -179,35 +224,47 @@ namespace generator {
       pop("r10", ctx, code);
       return true;
     }
+    if (typeid(*ast) == typeid(ASTBreakStmt)) {
+      std::shared_ptr<ASTBreakStmt> n = std::dynamic_pointer_cast<ASTBreakStmt>(ast);
+      std::shared_ptr<Loop> loop = ctx->get_loop();
+      if (!loop) {
+        err = GError(
+          "found break statement out of loop",
+          n->op
+        );
+      }
+      code += "jmp " + loop->end_label + "\n";
+      return true;
+    }
+    if (typeid(*ast) == typeid(ASTContinueStmt)) {
+      std::shared_ptr<ASTContinueStmt> n = std::dynamic_pointer_cast<ASTContinueStmt>(ast);
+      std::shared_ptr<Loop> loop = ctx->get_loop();
+      if (!loop) {
+        err = GError(
+          "found continue statement out of loop",
+          n->op
+        );
+      }
+      code += "jmp " + loop->loop_label + "\n";
+      return true;
+    }
     if (typeid(*ast) == typeid(ASTReturnStmt)) {
       std::shared_ptr<ASTReturnStmt> n = std::dynamic_pointer_cast<ASTReturnStmt>(ast);
       std::shared_ptr<ASTExpr> expr = std::dynamic_pointer_cast<ASTExpr>(n->expr);
       if (!generate_text_section(expr, ctx, code, err)) return false;
+      if (!type_eq(ctx->ret_type, expr->eval_type)) {
+        err = GError(
+          "expect return type " + ctx->ret_type->to_string() +
+          ", but returning " + expr->eval_type->to_string(),
+          n->op
+        );
+        return false;
+      }
       pop("rax", ctx, code);
       eval(expr, "rax", code);
       ret(code);
       return true;
     }
-    // if (typeid(*ast) == typeid(ASTBreakStmt)) {
-    //   std::string label = ctx->get_loop().label_break;
-    //   // TODO rsp
-    //   if (!label.length()) {
-    //     // TODO error
-    //     assert(false);
-    //   }
-    //   code += "jmp L" + label;
-    //   return;
-    // }
-    // if (typeid(*ast) == typeid(ASTContinueStmt)) {
-    //   std::string label = ctx->get_loop().label_continue;
-    //   // TODO rsp
-    //   if (!label.length()) {
-    //     // TODO error
-    //     assert(false);
-    //   }
-    //   code += "jmp L" + label;
-    //   return;
-    // }
     if (typeid(*ast) == typeid(ASTAssignExpr)) {
       std::shared_ptr<ASTAssignExpr> n = std::dynamic_pointer_cast<ASTAssignExpr>(ast);
       if (!generate_text_section(n->right, ctx, code, err)) return false;
@@ -229,13 +286,154 @@ namespace generator {
       n->is_assignable = false;
       return true;
     }
-    // if (typeid(*ast) == typeid(ASTLogicalOrExpr)) {}
-    // if (typeid(*ast) == typeid(ASTLogicalAndExpr)) {}
+    if (typeid(*ast) == typeid(ASTLogicalOrExpr)) {
+      std::shared_ptr<ASTLogicalOrExpr> n = std::dynamic_pointer_cast<ASTLogicalOrExpr>(ast);
+      std::string label = create_label();
+      if (!generate_text_section(n->left, ctx, code, err)) return false;
+      if (typeid(*n->left->eval_type) == typeid(TypeArray) ||
+          typeid(*n->left->eval_type) == typeid(TypeStruct)) {
+        err = GError(
+          "the operator is not avalilable with " +
+          n->left->eval_type->to_string(),
+          n->op
+        );
+        return false;
+      }
+      pop("r10", ctx, code);
+      eval(n->left, "r10", code);
+      code += "cmp r10, 0\n";
+      code += "setnz r10b\n";
+      code += "movzx r10, r10b\n";
+      code += "jnz " + label + "\n";
+      if (!generate_text_section(n->right, ctx, code, err)) return false;
+      if (typeid(*n->right->eval_type) == typeid(TypeArray) ||
+          typeid(*n->right->eval_type) == typeid(TypeStruct)) {
+        err = GError(
+          "the operator is not avalilable with " +
+          n->left->eval_type->to_string(),
+          n->op
+        );
+        return false;
+      }
+      pop("r10", ctx, code);
+      eval(n->right, "r10", code);
+      code += "cmp r10, 0\n";
+      code += "setnz r10b\n";
+      code += "movzx r10, r10b\n";
+      code += label + ":\n";
+      push("r10", ctx, code);
+      n->eval_type = std::make_shared<TypeNum>();
+      n->is_assignable = false;
+      return true;
+    }
+    if (typeid(*ast) == typeid(ASTLogicalAndExpr)) {
+      std::shared_ptr<ASTLogicalAndExpr> n = std::dynamic_pointer_cast<ASTLogicalAndExpr>(ast);
+      std::string label = create_label();
+      if (!generate_text_section(n->left, ctx, code, err)) return false;
+      if (typeid(*n->left->eval_type) == typeid(TypeArray) ||
+          typeid(*n->left->eval_type) == typeid(TypeStruct)) {
+        err = GError(
+          "the operator is not avalilable with " +
+          n->left->eval_type->to_string(),
+          n->op
+        );
+        return false;
+      }
+      pop("r10", ctx, code);
+      eval(n->left, "r10", code);
+      code += "cmp r10, 0\n";
+      code += "setnz r10b\n";
+      code += "movzx r10, r10b\n";
+      code += "jz " + label + "\n";
+      if (!generate_text_section(n->right, ctx, code, err)) return false;
+      if (typeid(*n->right->eval_type) == typeid(TypeArray) ||
+          typeid(*n->right->eval_type) == typeid(TypeStruct)) {
+        err = GError(
+          "the operator is not avalilable with " +
+          n->left->eval_type->to_string(),
+          n->op
+        );
+        return false;
+      }
+      pop("r10", ctx, code);
+      eval(n->right, "r10", code);
+      code += "cmp r10, 0\n";
+      code += "setnz r10b\n";
+      code += "movzx r10, r10b\n";
+      code += label + ":\n";
+      push("r10", ctx, code);
+      n->eval_type = std::make_shared<TypeNum>();
+      n->is_assignable = false;
+      return true;
+    }
     // if (typeid(*ast) == typeid(ASTBitwiseOrExpr)) {}
     // if (typeid(*ast) == typeid(ASTBitwiseXorExpr)) {}
     // if (typeid(*ast) == typeid(ASTBitwiseAndExpr)) {}
-    // if (typeid(*ast) == typeid(ASTEqualityExpr)) {}
-    // if (typeid(*ast) == typeid(ASTRelationalExpr)) {}
+    if (typeid(*ast) == typeid(ASTEqualityExpr)) {
+      std::shared_ptr<ASTEqualityExpr> n = std::dynamic_pointer_cast<ASTEqualityExpr>(ast);
+      if (!generate_text_section(n->left, ctx, code, err)) return false;
+      if (!generate_text_section(n->right, ctx, code, err)) return false;
+      if (!type_eq(n->left->eval_type, n->right->eval_type)) {
+        err = GError(
+          "cannot compare " + n->right->eval_type->to_string() +
+          " with " + n->left->eval_type->to_string(),
+          n->op
+        );
+        return false;
+      }
+      if (typeid(*n->left->eval_type) == typeid(TypeArray) ||
+          typeid(*n->left->eval_type) == typeid(TypeStruct)) {
+        err = GError(
+          "the operator is not avalilable with " +
+          n->left->eval_type->to_string(),
+          n->op
+        );
+        return false;
+      }
+      pop("r11", ctx, code);
+      pop("r10", ctx, code);
+      eval(n->left, "r10", code);
+      eval(n->right, "r11", code);
+      if (n->op->sv == "=") cmp("r10", "r10", "r11", "e", code);
+      else cmp("r10", "r10", "r11", "ne", code);
+      push("r10", ctx, code);
+      n->eval_type = std::make_shared<TypeNum>();
+      n->is_assignable = false;
+      return true;
+    }
+    if (typeid(*ast) == typeid(ASTRelationalExpr)) {
+      std::shared_ptr<ASTRelationalExpr> n = std::dynamic_pointer_cast<ASTRelationalExpr>(ast);
+      if (!generate_text_section(n->left, ctx, code, err)) return false;
+      if (!generate_text_section(n->right, ctx, code, err)) return false;
+      if (typeid(*n->left->eval_type) != typeid(TypeNum)) {
+        err = GError(
+          "the operator is not avalilable with " +
+          n->left->eval_type->to_string(),
+          n->op
+        );
+        return false;
+      }
+      if (typeid(*n->right->eval_type) != typeid(TypeNum)) {
+        err = GError(
+          "the operator is not avalilable with " +
+          n->right->eval_type->to_string(),
+          n->op
+        );
+        return false;
+      }
+      pop("r11", ctx, code);
+      pop("r10", ctx, code);
+      eval(n->left, "r10", code);
+      eval(n->right, "r11", code);
+      if (n->op->sv == ">") cmp("r10", "r10", "r11", "g", code);
+      else if (n->op->sv == "<") cmp("r10", "r10", "r11", "l", code);
+      else if (n->op->sv == ">=") cmp("r10", "r10", "r11", "ge", code);
+      else cmp("r10", "r10", "r11", "le", code);
+      push("r10", ctx, code);
+      n->eval_type = std::make_shared<TypeNum>();
+      n->is_assignable = false;
+      return true;
+    }
     // if (typeid(*ast) == typeid(ASTShiftExpr)) {}
     if (typeid(*ast) == typeid(ASTAdditiveExpr)) {
       std::shared_ptr<ASTAdditiveExpr> n = std::dynamic_pointer_cast<ASTAdditiveExpr>(ast);
@@ -288,12 +486,19 @@ namespace generator {
         );
         return false;
       }
-      pop("r11", ctx, code);
+      code += "xor rdx, rdx\n";
       pop("r10", ctx, code);
-      eval(n->left, "r10", code);
-      eval(n->right, "r11", code);
-      if (n->op->sv == "*") code += "imul r10, r11\n";
-      else code += "idiv r10, r11\n";
+      pop("rax", ctx, code);
+      eval(n->left, "rax", code);
+      eval(n->right, "r10", code);
+      if (n->op->sv == "*") code += "imul r10\n";
+      else if (n->op->sv == "/") code += "idiv r10\n";
+      if (n->op->sv == "%") {
+        code += "idiv r10\n";
+        code += "mov r10, rdx\n";
+      } else {
+        code += "mov r10, rax\n";
+      }
       push("r10", ctx, code);
       n->eval_type = n->left->eval_type;
       n->is_assignable = false;
@@ -334,7 +539,8 @@ namespace generator {
     if (typeid(*ast) == typeid(ASTFuncCallExpr)) {
       std::shared_ptr<ASTFuncCallExpr> n = std::dynamic_pointer_cast<ASTFuncCallExpr>(ast);
       if (!generate_text_section(n->primary, ctx, code, err)) return false;
-      if (typeid(*n->primary->eval_type) != typeid(TypeFunc)) {
+      if (typeid(*n->primary->eval_type) != typeid(TypeFunc) &&
+          typeid(*n->primary->eval_type) != typeid(TypeFfi)) {
         err = GError(
           n->primary->eval_type->to_string() +
           " is not function-call-expr",
@@ -350,11 +556,11 @@ namespace generator {
         );
         return false;
       }
-      std::shared_ptr<TypeFunc> tf = std::dynamic_pointer_cast<TypeFunc>(n->primary->eval_type);
       for (int i=0; i < (int)n->args.size(); i++) {
         if (!generate_text_section(n->args[i], ctx, code, err)) return false;
       }
-      if (typeid(*tf->ret_type) != typeid(TypeAny)) {
+      if (typeid(*n->primary->eval_type) == typeid(TypeFunc)) {
+        std::shared_ptr<TypeFunc> tf = std::dynamic_pointer_cast<TypeFunc>(n->primary->eval_type);
         if (n->args.size() != tf->type_args.size()) {
           err = GError(
             "the type of function is " + tf->to_string() +
@@ -372,10 +578,14 @@ namespace generator {
             return false;
           }
         }
+        n->eval_type = tf->ret_type;
+      } else {
+        n->eval_type = n->primary->eval_type;
       }
       for (int i=(int)n->args.size()-1; i >= 0; i--) {
         pop(param_reg_names[i], ctx, code);
-        if (typeid(*n->args[i]->eval_type) != typeid(TypeArray)) {
+        if (typeid(*n->args[i]->eval_type) != typeid(TypeArray) &&
+            typeid(*n->args[i]->eval_type) != typeid(TypeStruct)) {
           eval(n->args[i], param_reg_names[i], code);
         }
       }
@@ -383,7 +593,6 @@ namespace generator {
       eval(n->primary, "rax", code);
       call("rax", ctx, code);
       push("rax", ctx, code);
-      n->eval_type = tf->ret_type;
       n->is_assignable = false;
       return true;
     }
@@ -477,12 +686,20 @@ namespace generator {
           n->is_assignable = false;
           return true;
         }
-        // TODO get extern
-        code += "mov r10, [rip + " + std::string(n->op->sv) + "@GOTPCREL]\n";
-        push("r10", ctx, code);
-        n->eval_type = std::make_shared<TypeFunc>(std::make_shared<TypeAny>());
-        n->is_assignable = false;
-        return true;
+        std::shared_ptr<Ffi> ff = ctx->get_ffi(n->op->sv);
+        if (ff) {
+          get_ffi_addr("r10", ff, code);
+          push("r10", ctx, code);
+          n->eval_type = ff->type;
+          n->is_assignable = false;
+          return true;
+        }
+        err = GError(
+          std::string(n->op->sv) +
+          " is not defined",
+          n->op
+        );
+        return false;
       } else if (n->op->type == NumberConstant) {
         code += "mov r10, " + std::string(n->op->sv) + "\n";
         push("r10", ctx, code);

@@ -15,6 +15,7 @@ namespace tokenizer {
     KwContinue,     // continue
     KwElif,         // elif
     KwElse,         // else
+    KwFfi,
     KwFunc,         // func
     KwFuncptr,      // funcptr
     KwIf,           // if

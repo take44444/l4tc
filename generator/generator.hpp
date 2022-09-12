@@ -131,10 +131,6 @@ namespace generator {
     : EvalType(), type_args(ta), ret_type(rt) {
       size = 8;
     }
-    explicit TypeFunc(std::shared_ptr<EvalType> rt)
-    : EvalType(), ret_type(rt) {
-      size = 8;
-    }
     int calculate_size() {
       return 8;
     }
@@ -149,31 +145,26 @@ namespace generator {
     }
   };
 
-  class TypeAny : public EvalType {
+  class TypeFfi : public EvalType {
     public:
-    TypeAny() : EvalType() {}
+    TypeFfi() : EvalType() {
+      size = 8;
+    }
     int calculate_size() {
-      return 0;
+      return 8;
     }
     std::string to_string() {
-      return "any";
+      return "ffi";
     }
   };
 
-  // class LoopInfo {
-  //   public:
-  //   std::string label_break;
-  //   std::string label_continue;
-  //   LoopInfo(int i) {
-  //     if (i < 0) {
-  //       label_break = "";
-  //       label_continue = "";
-  //       return;
-  //     }
-  //     label_break = std::to_string(i) + "B";
-  //     label_continue = std::to_string(i) + "C";
-  //   }
-  // };
+  class Loop {
+    public:
+    std::string loop_label;
+    std::string end_label;
+    Loop(std::string ll, std::string el)
+    : loop_label(ll), end_label(el) {}
+  };
 
   class GlobalVar {
     public:
@@ -189,6 +180,15 @@ namespace generator {
     Func(std::string n, std::shared_ptr<TypeFunc> t) : name(n), type(t) {}
   };
 
+  class Ffi {
+    public:
+    std::string name;
+    std::shared_ptr<TypeFfi> type;
+    Ffi(std::string n) : name(n) {
+      type = std::make_shared<TypeFfi>();
+    }
+  };
+
   class LocalVar {
     public:
     int offset;
@@ -199,17 +199,23 @@ namespace generator {
   class Context {
     public:
     int rsp;
-    // std::vector<int> saved_rsp;
+    std::shared_ptr<EvalType> ret_type;
     std::vector<std::map<std::string, std::shared_ptr<LocalVar>>> scopes_local_vars;
+    std::vector<std::shared_ptr<Loop>> loops;
     std::map<std::string, std::shared_ptr<GlobalVar>> global_vars;
     std::map<std::string, std::shared_ptr<Func>> funcs;
+    std::map<std::string, std::shared_ptr<Ffi>> ffis;
     std::vector<std::pair<std::string, std::string>> strs;
     std::map<std::string, std::shared_ptr<TypeStruct>> structs;
 
-    Context() : rsp(0) {}
+    Context() : rsp(0), ret_type(nullptr) {}
 
     void add_func(std::string key, std::shared_ptr<TypeFunc> type) {
       funcs.insert({key, std::make_shared<Func>(key, type)});
+    }
+
+    void add_ffi(std::string key) {
+      ffis.insert({key, std::make_shared<Ffi>(key)});
     }
 
     void add_struct(std::string_view key, std::shared_ptr<TypeStruct> type) {
@@ -233,6 +239,12 @@ namespace generator {
     std::shared_ptr<Func> get_func(std::string_view key) {
       auto it = funcs.find(std::string(key));
       if (it == funcs.end()) return nullptr;
+      return it->second;
+    }
+
+    std::shared_ptr<Ffi> get_ffi(std::string_view key) {
+      auto it = ffis.find(std::string(key));
+      if (it == ffis.end()) return nullptr;
       return it->second;
     }
 
@@ -265,6 +277,19 @@ namespace generator {
 
     void end_scope() {
       scopes_local_vars.pop_back();
+    }
+
+    void start_loop(std::string ll, std::string el) {
+      loops.push_back(std::make_shared<Loop>(ll, el));
+    }
+
+    void end_loop() {
+      loops.pop_back();
+    }
+
+    std::shared_ptr<Loop> get_loop() {
+      if ((int)loops.size() == 0) return nullptr;
+      return loops.back();
     }
 
     // LoopInfo get_loop() {
@@ -345,7 +370,10 @@ namespace generator {
   void eval(std::shared_ptr<ASTExpr> expr, std::string reg, std::string &code);
   std::string create_label();
   void derefer(std::string reg, std::string &code);
+  void cmp(std::string reg, std::string l, std::string r,
+           std::string op, std::string &code);
   void get_func_addr(std::string reg, std::shared_ptr<Func> f, std::string &code);
+  void get_ffi_addr(std::string reg, std::shared_ptr<Ffi> f, std::string &code);
   void get_global_var_addr(std::string reg, std::shared_ptr<GlobalVar> gv, std::string &code);
   void get_str_addr(std::string reg, std::string &label, std::string &code);
   void get_local_var_addr(std::string reg, std::shared_ptr<LocalVar> lv, std::string &code);

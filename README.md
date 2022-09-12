@@ -31,8 +31,8 @@ The compiler for L4T, which is the original programming language.
 - [ ] セキュアコーディング
   - [x] 厳格な型システム．`ptr<num>`，`array<num>[2]`，`&array<num>[2]`，`&array<num>[3]`，`&array<array<num>[2]>[2]`などは全て別の型として解析され，暗黙的な変換を許さない．
   - [ ] ポインタ変数には，自身よりライフタイムが大きい変数のアドレスしか代入できないようにする．
-  - [ ] extern "C" any ???? (libcから持ってくるものは全てany型)
-  - [ ] ブロックにunsafe属性を設け，型Anyはunsafeブロック内にしか存在できないようにする．
+  - [ ] ffi "C" ???? (libcから持ってくるものは全てffi型)
+  - [ ] ブロックにunsafe属性を設け，ffi型の値はunsafeブロック内にしか存在できないようにする．
 - [x] 賢く分かりやすいエラー出力
   - [x] parserからの分かりやすいエラー出力
   - [x] generatorからの分かりやすいエラー出力

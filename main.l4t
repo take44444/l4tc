@@ -1,27 +1,55 @@
+ffi "C" calloc
+ffi "C" free
+ffi "C" printf
 
-struct Data1
-  array<struct Data2>[2] d2
-  ptr<struct Data1> other
+struct Node
+  num is_head
+  num val
+  ptr<struct Node> next
 
-struct Data2
-  array<num>[2] a
+struct LinkedList
+  ptr<struct Node> head
+  ptr<struct Node> tail
+
+func init_ll(ptr<struct LinkedList> ll) -> num
+  ptr<struct Node> node
+  node: calloc(3, 8)
+  (*ll).head: node
+  (*ll).tail: node
+  return 0
+
+func free_ll(ptr<struct LinkedList> ll) -> num
+  ptr<struct Node> next, tmp
+  next: (*ll).head
+  loop next
+    tmp: (*next).next
+    free(next)
+    next: tmp
+  return 0
+
+func push_ll(ptr<struct LinkedList> ll, num v) -> num
+  ptr<struct Node> node
+  node: calloc(3, 8)
+  (*node).val: v
+  (*(*ll).tail).next: node
+  (*ll).tail: node
+  return 0
+
+func print_ll(ptr<struct LinkedList> ll) -> num
+  ptr<struct Node> next
+  next: (*(*ll).head).next
+  loop next
+    printf("%d\n", (*next).val)
+    next: (*next).next
+  return 0
 
 func main() -> num
-  struct Data1 a, b
+  struct LinkedList ll
+  init_ll(&ll)
+  push_ll(&ll, 10)
+  push_ll(&ll, 200)
+  push_ll(&ll, 0 - 3000)
 
-  a.other: &b
-  b.other: &a
-
-  a.d2[0].a[0]: 10
-  b.d2[0].a[0]: 11
-  a.d2[0].a[1]: 20
-  b.d2[0].a[1]: 21
-  a.d2[1].a[0]: 30
-  b.d2[1].a[0]: 31
-  a.d2[1].a[1]: 40
-  b.d2[1].a[1]: 41
-
-  printf(&"%d\n", (*(*(*(*a.other).other).other).other).d2[1].a[0])
-  printf(&"%d\n", (*(*(*(*(*a.other).other).other).other).other).d2[1].a[1])
-
+  print_ll(&ll)
+  free_ll(&ll)
   return 0

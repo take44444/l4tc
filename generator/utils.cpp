@@ -24,11 +24,22 @@ namespace generator {
     return "L" + std::to_string(label_number++);
   }
 
+  void cmp(std::string reg, std::string l, std::string r,
+           std::string op, std::string &code) {
+    code += "cmp " + l + ", " + r +"\n";
+    code += "set" + op + " " + reg +"b\n";
+    code += "movzx " + reg + ", " + reg +"b\n";
+  }
+
   void derefer(std::string reg, std::string &code) {
     code += "mov " + reg + ", [" + reg +"]\n";
   }
 
   void get_func_addr(std::string reg, std::shared_ptr<Func> f, std::string &code) {
+    code += "mov " + reg + ", [rip + " + f->name + "@GOTPCREL]\n";
+  }
+
+  void get_ffi_addr(std::string reg, std::shared_ptr<Ffi> f, std::string &code) {
     code += "mov " + reg + ", [rip + " + f->name + "@GOTPCREL]\n";
   }
 
@@ -67,7 +78,7 @@ namespace generator {
   }
 
   bool type_eq(std::shared_ptr<EvalType> x, std::shared_ptr<EvalType> y) {
-    if (typeid(*x) == typeid(TypeAny) || typeid(*y) == typeid(TypeAny)) return true;
+    if (typeid(*x) == typeid(TypeFfi) || typeid(*y) == typeid(TypeFfi)) return true;
     if (typeid(*x) != typeid(*y)) return false;
     if (typeid(*x) == typeid(TypeArray)) {
       std::shared_ptr<TypeArray> xx = std::dynamic_pointer_cast<TypeArray>(x);
