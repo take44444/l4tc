@@ -1,5 +1,6 @@
 #!/bin/bash
 ESC=$(printf '\033')
+make
 rm -f ./$1/result/*
 rm -f $2.S
 cat $2.l4t | ./l4tc 1> $2.S
