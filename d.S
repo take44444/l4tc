@@ -63,6 +63,7 @@ mov [r10], r11
 push r11
 pop r10
 L0:
+lea rsp, [rbp - 8]
 mov r10, 1
 push r10
 pop r10
@@ -114,6 +115,7 @@ pop r10
 lea rsp, [rbp - 8]
 jmp L0
 L1:
+lea rsp, [rbp - 8]
 mov r10, 0
 push r10
 pop rax
@@ -232,6 +234,7 @@ mov [r10], r11
 push r11
 pop r10
 L6:
+lea rsp, [rbp - 24]
 mov r10, 1
 push r10
 pop r10
@@ -293,6 +296,7 @@ pop r10
 lea rsp, [rbp - 24]
 jmp L6
 L7:
+lea rsp, [rbp - 24]
 lea r10, [rbp - 24]
 push r10
 lea r10, [rbp - 8]
@@ -428,6 +432,7 @@ mov [r10], r11
 push r11
 pop r10
 L10:
+lea rsp, [rbp - 48]
 lea r10, [rbp - 48]
 push r10
 lea r10, [rbp - 16]
@@ -581,6 +586,7 @@ pop r10
 lea rsp, [rbp - 48]
 jmp L10
 L11:
+lea rsp, [rbp - 48]
 lea r10, [rbp - 8]
 push r10
 lea r10, [rbp - 40]
@@ -675,6 +681,7 @@ mov [r10], r11
 push r11
 pop r10
 L15:
+lea rsp, [rbp - 8000032]
 lea r10, [rbp - 4800024]
 push r10
 lea r10, [rbp - 8]
@@ -743,6 +750,7 @@ pop r10
 lea rsp, [rbp - 8000032]
 jmp L15
 L16:
+lea rsp, [rbp - 8000032]
 mov r10, 0
 push r10
 lea r10, [rbp - 4800024]
@@ -753,6 +761,7 @@ mov [r10], r11
 push r11
 pop r10
 L17:
+lea rsp, [rbp - 8000032]
 lea r10, [rbp - 4800024]
 push r10
 lea r10, [rbp - 8]
@@ -883,6 +892,7 @@ pop r10
 lea rsp, [rbp - 8000032]
 jmp L17
 L18:
+lea rsp, [rbp - 8000032]
 mov r10, 0
 push r10
 lea r10, [rbp - 5600032]
@@ -902,6 +912,7 @@ mov [r10], r11
 push r11
 pop r10
 L20:
+lea rsp, [rbp - 8000032]
 lea r10, [rbp - 4800024]
 push r10
 lea r10, [rbp - 8]
@@ -953,6 +964,7 @@ pop r10
 lea rsp, [rbp - 8000032]
 jmp L20
 L21:
+lea rsp, [rbp - 8000032]
 mov r10, 0
 push r10
 lea r10, [rbp - 4800024]
@@ -963,6 +975,7 @@ mov [r10], r11
 push r11
 pop r10
 L22:
+lea rsp, [rbp - 8000032]
 lea r10, [rbp - 4800024]
 push r10
 lea r10, [rbp - 8]
@@ -1045,6 +1058,7 @@ pop r10
 lea rsp, [rbp - 8000032]
 jmp L22
 L23:
+lea rsp, [rbp - 8000032]
 mov r10, 0
 push r10
 lea r10, [rbp - 4800024]
@@ -1055,6 +1069,7 @@ mov [r10], r11
 push r11
 pop r10
 L26:
+lea rsp, [rbp - 8000032]
 lea r10, [rbp - 4800024]
 push r10
 lea r10, [rbp - 8]
@@ -1115,6 +1130,7 @@ pop r10
 lea rsp, [rbp - 8000032]
 jmp L26
 L27:
+lea rsp, [rbp - 8000032]
 mov r10, 0
 push r10
 lea r10, [rbp - 4800024]
@@ -1125,6 +1141,7 @@ mov [r10], r11
 push r11
 pop r10
 L28:
+lea rsp, [rbp - 8000032]
 lea r10, [rbp - 4800024]
 push r10
 lea r10, [rbp - 8]
@@ -1224,6 +1241,7 @@ mov [r10], r11
 push r11
 pop r10
 L32:
+lea rsp, [rbp - 8000048]
 lea r10, [rbp - 8000048]
 push r10
 lea r10, [rbp - 4800016]
@@ -1390,6 +1408,7 @@ pop r10
 lea rsp, [rbp - 8000048]
 jmp L32
 L33:
+lea rsp, [rbp - 8000048]
 lea r10, [rbp - 4800024]
 push r10
 mov r10, 1
@@ -1409,6 +1428,7 @@ pop r10
 lea rsp, [rbp - 8000032]
 jmp L28
 L29:
+lea rsp, [rbp - 8000032]
 mov r10, 0
 push r10
 lea r10, [rbp - 4800024]
@@ -1419,6 +1439,7 @@ mov [r10], r11
 push r11
 pop r10
 L36:
+lea rsp, [rbp - 8000032]
 lea r10, [rbp - 4800024]
 push r10
 lea r10, [rbp - 8]
@@ -1516,6 +1537,7 @@ pop r10
 lea rsp, [rbp - 8000032]
 jmp L36
 L37:
+lea rsp, [rbp - 8000032]
 mov r10, 0
 push r10
 pop rax
