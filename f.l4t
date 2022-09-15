@@ -50,7 +50,7 @@ struct Op
   num idx
   num pre
 
-array<struct vector>[200000] g
+ptr<array<struct vector>[200000]> gp
 
 func dfs(num v, num p, ptr<array<num>[200000]> a, ptr<struct vector> dp, num ans_pre, ptr<array<num>[200000]> ans) -> num
   struct Op op
@@ -65,11 +65,11 @@ func dfs(num v, num p, ptr<array<num>[200000]> a, ptr<struct vector> dp, num ans
 
   num i
   i: 0
-  loop i < g[v].len
-    if (*g[v].p)[i] = p
+  loop i < (*gp)[v].len
+    if (*(*gp)[v].p)[i] = p
       i: i + 1
       continue
-    dfs((*g[v].p)[i], v, a, dp, (*ans)[v], ans)
+    dfs((*(*gp)[v].p)[i], v, a, dp, (*ans)[v], ans)
     i: i + 1
 
   if op.pre > 0
@@ -79,6 +79,8 @@ func dfs(num v, num p, ptr<array<num>[200000]> a, ptr<struct vector> dp, num ans
   return 0
 
 func main() -> num
+  array<struct vector>[200000] g
+  gp: &g
   num n, i
   array<num>[200000] a
   struct vector dp
