@@ -179,7 +179,9 @@ namespace generator {
       std::string loop_label = create_label();
       std::string end_label = create_label();
       ctx->start_loop(loop_label, end_label);
+      int saved_rsp = ctx->rsp;
       code += loop_label + ":\n";
+      code += "lea rsp, [rbp - " + std::to_string(-saved_rsp) + "]\n";
       if (!generate_text_section(n->cond, ctx, code, err)) return false;
       if (typeid(*n->cond->eval_type) == typeid(TypeArray) ||
           typeid(*n->cond->eval_type) == typeid(TypeStruct)) {
@@ -197,6 +199,7 @@ namespace generator {
       if (!generate_text_section(n->true_stmt, ctx, code, err)) return false;
       code += "jmp " + loop_label + "\n";
       code += end_label + ":\n";
+      code += "lea rsp, [rbp - " + std::to_string(-saved_rsp) + "]\n";
       ctx->end_loop();
       return true;
     }
