@@ -1,0 +1,110 @@
+ffi "C" free
+ffi "C" printf
+ffi "C" realloc
+ffi "C" scanf
+
+struct vector
+  ptr<array<num>[0]> p
+  num len
+  num sz
+
+func init(ptr<struct vector> v) -> num
+  (*v).len: 0
+  (*v).sz: 1
+  (*v).p: realloc(0, 8)
+  loop 1
+    if (*v).p
+      break
+    (*v).p: realloc(0, 8)
+  return 0
+
+func push(ptr<struct vector> v, num val) -> num
+  if (*v).len = (*v).sz
+    (*v).sz: (*v).sz * 2
+    ptr<array<num>[0]> tmp
+    tmp: realloc((*v).p, (*v).sz * 8)
+    loop 1
+      if tmp
+        break
+      tmp: realloc((*v).p, (*v).sz * 8)
+    (*v).p: tmp
+  (*(*v).p)[(*v).len]: val
+  return (*v).len: (*v).len + 1
+
+func pop(ptr<struct vector> v) -> num
+  return (*v).len: (*v).len - 1
+
+func binary_search(ptr<struct vector> dp, num x) -> num
+  num l, r, mid
+  l: 0-1
+  r: (*dp).len
+  loop r - l > 1
+    mid: (l + r) / 2
+    if (*(*dp).p)[mid] >= x
+      r: mid
+    else
+      l: mid
+  return r
+
+struct Op
+  num idx
+  num pre
+
+array<struct vector>[200000] g
+
+func dfs(num v, num p, ptr<array<num>[200000]> a, ptr<struct vector> dp, num ans_pre, ptr<array<num>[200000]> ans) -> num
+  struct Op op
+  op.idx: binary_search(dp, (*a)[v])
+  if op.idx = (*dp).len
+    push(dp, 0)
+    (*ans)[v]: ans_pre + 1
+  else
+    (*ans)[v]: ans_pre
+  op.pre: (*(*dp).p)[op.idx]
+  (*(*dp).p)[op.idx]: (*a)[v]
+
+  num i
+  i: 0
+  loop i < g[v].len
+    if (*g[v].p)[i] = p
+      i: i + 1
+      continue
+    dfs((*g[v].p)[i], v, a, dp, (*ans)[v], ans)
+    i: i + 1
+
+  if op.pre > 0
+    (*(*dp).p)[op.idx]: op.pre
+  else
+    pop(dp)
+  return 0
+
+func main() -> num
+  num n, i
+  array<num>[200000] a
+  struct vector dp
+  array<num>[200000] ans
+  init(&dp)
+  scanf("%lld*c", &n)
+  i: 0
+  loop i < n
+    init(&g[i])
+    scanf("%lld%*c", &a[i])
+    i: i + 1
+  i: 0
+  loop i < n - 1
+    num u, v
+    scanf("%lld %lld%*c", &u, &v)
+    push(&g[u-1], v-1)
+    push(&g[v-1], u-1)
+    i: i + 1
+
+  dfs(0, 0, &a, &dp, 0, &ans)
+
+  free(dp.p)
+  i: 0
+  loop i < n
+    free(g[i].p)
+    printf("%lld\n", ans[i])
+    i: i + 1
+
+  return 0
