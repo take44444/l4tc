@@ -1,0 +1,111 @@
+ffi "C" free
+ffi "C" printf
+ffi "C" realloc
+ffi "C" scanf
+
+struct vector
+  ptr<array<num>[0]> p
+  num len
+  num sz
+
+func init(ptr<struct vector> v) -> num
+  (*v).len: 0
+  (*v).sz: 1
+  (*v).p: realloc(0, 8)
+  loop 1
+    if (*v).p
+      break
+    (*v).p: realloc(0, 8)
+  return 0
+
+func push(ptr<struct vector> v, num val) -> num
+  if (*v).len = (*v).sz
+    (*v).sz: (*v).sz * 2
+    ptr<array<num>[0]> tmp
+    tmp: realloc((*v).p, (*v).sz * 8)
+    loop 1
+      if tmp
+        break
+      tmp: realloc((*v).p, (*v).sz * 8)
+    (*v).p: tmp
+  (*(*v).p)[(*v).len]: val
+  (*v).len: (*v).len + 1
+  return 0
+
+func dfs(num v, ptr<array<struct vector>[100000]> g, ptr<array<num>[100000]> visited, ptr<num> len, ptr<array<num>[100000]> topo) -> num
+  (*visited)[v]: 1
+  num i
+  i: 0
+  loop i < (*g)[v].len
+    if (*visited)[(*(*g)[v].p)[i]] = 0
+      dfs((*(*g)[v].p)[i], g, visited, len, topo)
+    i: i + 1
+
+  (*topo)[(*len)]: v
+  (*len): (*len) + 1
+  return 0
+
+func main() -> num
+  num n, m
+  scanf("%lld %lld%*c", &n, &m)
+  array<struct vector>[100000] g
+  array<struct vector>[100000] gp
+  num i
+  i: 0
+  loop i < n
+    init(&g[i])
+    init(&gp[i])
+    i: i + 1
+  i: 0
+  loop i < n + m - 1
+    num a, b
+    scanf("%lld %lld%*c", &a, &b)
+    push(&g[a-1], b-1)
+    push(&gp[b-1], a-1)
+    i: i + 1
+
+  array<num>[100000] topo
+  num len
+  len: 0
+  array<num>[100000] visited
+  i: 0
+  loop i < n
+    visited[i]: 0
+    i: i + 1
+  i: 0
+  loop i < n
+    if visited[i] = 0
+      dfs(i, &g, &visited, &len, &topo)
+    i: i + 1
+
+  array<num>[100000] ans
+  array<num>[100000] index
+  i: 0
+  loop i < n
+    index[topo[i]]: i
+    i: i + 1
+  i: 0
+  loop i < n
+    if gp[i].len = 0
+      ans[i]: 0
+      i: i + 1
+      continue
+    num tmp
+    tmp: 1000000
+    num j
+    j: 0
+    loop j < gp[i].len
+      if tmp > index[(*gp[i].p)[j]]
+        tmp: index[(*gp[i].p)[j]]
+        ans[i]: topo[tmp] + 1
+      j: j + 1
+    i: i + 1
+
+  i: 0
+  loop i < n
+    free(g[i].p)
+    free(gp[i].p)
+    printf("%lld\n", ans[i])
+    i: i + 1
+
+  return 0
