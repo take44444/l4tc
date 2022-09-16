@@ -2,15 +2,15 @@
 
 function compiler_code {
     echo '#include <bits/stdc++.h>' && \
-    mkdir tmp && \
-    for d in generator parser tokenizer; do mkdir "tmp/${d}"; done && \
-    for f in generator/* parser/* tokenizer/*; do sed '/#include/d' "${f}" > "tmp/${f}"; done && \
-    sed '/#include "bits\/stdc++.h"/d' l4tc.cpp > tmp/l4tc.cpp && \
-    cp l4tc.hpp tmp/l4tc.hpp && \
-    g++ -std=c++17 -E tmp/l4tc.cpp tmp/tokenizer/tokenizer.cpp \
-        tmp/parser/parser.cpp tmp/parser/utils.cpp \
-        tmp/generator/generator.cpp tmp/generator/utils.cpp | sed '/#/d' | cat -s && \
-    rm -rf tmp
+    local tmpdir=$(mktemp -d 2>/dev/null || mktemp -d -t 'l4t_atcoder_compiler_code') && \
+    for d in generator parser tokenizer; do mkdir "${tmpdir}/${d}"; done && \
+    for f in generator/* parser/* tokenizer/*; do sed '/#include/d' "${f}" > "${tmpdir}/${f}"; done && \
+    sed '/#include "bits\/stdc++.h"/d' l4tc.cpp > "${tmpdir}/l4tc.cpp" && \
+    cp l4tc.hpp "${tmpdir}/l4tc.hpp" && \
+    g++ -std=c++17 -E "${tmpdir}/l4tc.cpp" "${tmpdir}/tokenizer/tokenizer.cpp" \
+        "${tmpdir}/parser/parser.cpp" "${tmpdir}/parser/utils.cpp" \
+        "${tmpdir}/generator/generator.cpp" "${tmpdir}/generator/utils.cpp" | sed '/#/d' | cat -s && \
+    rm -rf "${tmpdir}"
 }
 
 function compose {
@@ -49,8 +49,9 @@ if [ $# -ne 1 ]; then
     echo Usage: $(basename $0) your_L4T_code_filename
     exit 1
 else
-    compiler_code > tmp.cpp && \
-    compose $1 tmp.cpp && \
-    rm tmp.cpp
+    tmpdir=$(mktemp -d 2>/dev/null || mktemp -d -t 'l4t_atcoder')
+    compiler_code > "${tmpdir}/compiler.cpp" && \
+    compose $1 "${tmpdir}/compiler.cpp" && \
+    rm "${tmpdir}/compiler.cpp"
 fi
 
