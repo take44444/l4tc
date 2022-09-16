@@ -39,7 +39,7 @@ EOS
     with open(f'l4tc.cpp', 'w') as f:
         f.write(compiler_code)
 
-    os.system(f'g++ -std=c++17 -o l4tc l4tc.cpp && '
+    os.system(f'g++ -std=c++17 -O2 -o l4tc l4tc.cpp && '
               f'./l4tc < main.l4t > main.S && '
               f'gcc -fsplit-stack -o main main.S')
 EOS
