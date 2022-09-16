@@ -3,13 +3,13 @@
 function compiler_code {
     echo '#include <bits/stdc++.h>' && \
     mkdir tmp && \
-    for d in generator parser tokenizer; do mkdir tmp/$d; done && \
-    for f in generator/* parser/* tokenizer/*; do sed '/#include/d' $f > tmp/$f; done && \
+    for d in generator parser tokenizer; do mkdir "tmp/${d}"; done && \
+    for f in generator/* parser/* tokenizer/*; do sed '/#include/d' "${f}" > "tmp/${f}"; done && \
     sed '/#include "bits\/stdc++.h"/d' l4tc.cpp > tmp/l4tc.cpp && \
     cp l4tc.hpp tmp/l4tc.hpp && \
     g++ -std=c++17 -E tmp/l4tc.cpp tmp/tokenizer/tokenizer.cpp \
-    tmp/parser/parser.cpp tmp/parser/utils.cpp \
-    tmp/generator/generator.cpp tmp/generator/utils.cpp | sed '/#/d' | cat -s && \
+        tmp/parser/parser.cpp tmp/parser/utils.cpp \
+        tmp/generator/generator.cpp tmp/generator/utils.cpp | sed '/#/d' | cat -s && \
     rm -rf tmp
 }
 
