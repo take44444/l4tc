@@ -20,7 +20,7 @@ import os
 
 
 if sys.argv[-1] != 'ONLINE_JUDGE':
-    os.system(f'./main')
+    os.system('./main')
 else:
     program_code = r'''
 EOS
@@ -34,14 +34,14 @@ EOS
     cat - << EOS
 '''
 
-    with open(f'main.l4t', 'w') as f:
+    with open('main.l4t', 'w') as f:
         f.write(program_code)
-    with open(f'l4tc.cpp', 'w') as f:
+    with open('l4tc.cpp', 'w') as f:
         f.write(compiler_code)
 
-    os.system(f'g++ -std=c++17 -O2 -o l4tc l4tc.cpp && '
-              f'./l4tc < main.l4t > main.S && '
-              f'gcc -fsplit-stack -o main main.S')
+    os.system('g++ -std=c++17 -O2 -o l4tc l4tc.cpp && '
+              './l4tc < main.l4t > main.S && '
+              'gcc -fsplit-stack -o main main.S')
 EOS
 }
 
