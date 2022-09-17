@@ -49,9 +49,9 @@ if [ $# -ne 1 ]; then
     echo Usage: $(basename $0) your_L4T_code_filename
     exit 1
 else
-    tmpdir=$(mktemp -d 2>/dev/null || mktemp -d -t 'l4t_atcoder')
+    tmpdir=$(mktemp -d 2>/dev/null || mktemp -d -t 'l4t_atcoder') && \
     compiler_code > "${tmpdir}/compiler.cpp" && \
     compose $1 "${tmpdir}/compiler.cpp" && \
-    rm "${tmpdir}/compiler.cpp"
+    rm -rf "${tmpdir}"
 fi
 
